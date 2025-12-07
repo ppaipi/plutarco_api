@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Panel de Administración</h2>
+
+  <button onclick="window.location='upload_excel.html'">Importar Excel</button>
+  <button onclick="window.location='upload_habilitados.html'">Importar Habilitados</button>
+  <button onclick="window.location='upload_orden.html'">Importar Orden</button>
+
+  <script>
+    if (!localStorage.getItem("admin_token")) {
+      window.location = "/admin/login.html";
+    }
+  </script>
+</body>
+</html>

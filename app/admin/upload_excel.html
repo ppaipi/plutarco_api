@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Importar Excel</h2>
+
+  <input type="file" id="fileInput">
+  <button onclick="upload()">Subir</button>
+
+  <script>
+    async function upload() {
+      const file = document.getElementById("fileInput").files[0];
+      if (!file) return alert("Elegí un archivo");
+
+      const form = new FormData();
+      form.append("file", file);
+
+      const token = localStorage.getItem("admin_token");
+
+      const response = await fetch("/products/import", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + token
+        },
+        body: form
+      });
+
+      const data = await response.json();
+      alert(JSON.stringify(data, null, 2));
+    }
+  </script>
+</body>
+</html>

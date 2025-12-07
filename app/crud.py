@@ -2,8 +2,9 @@
 from sqlmodel import select
 from .models import Product, Order, OrderProduct
 from .database import get_session
-from typing import List
+from typing import List, Optional
 
+# ---------- Productos ----------
 def create_product(session, product: Product):
     session.add(product)
     session.commit()
@@ -13,9 +14,180 @@ def create_product(session, product: Product):
 def get_products(session) -> List[Product]:
     return session.exec(select(Product)).all()
 
-def get_product_by_codigo(session, codigo: str):
+def get_product_by_codigo(session, codigo: str) -> Optional[Product]:
     return session.exec(select(Product).where(Product.codigo == codigo)).first()
 
+def get_product_by_id(session, product_id: int) -> Optional[Product]:
+    return session.get(Product, product_id)
+
+def get_product_by_nombre(session, nombre: str) -> Optional[Product]:
+    return session.exec(select(Product).where(Product.nombre == nombre)).first()
+
+def update_product_full(session, codigo: str, data: dict):
+    """
+    Actualiza todas las propiedades del producto identificado por 'codigo',
+    pero NO modifica 'orden' ni 'habilitado' (se preservan).
+    """
+    prod = get_product_by_codigo(session, codigo)
+    if not prod:
+        return None
+    # preservar
+    orden = prod.orden
+    habilitado = prod.habilitado
+
+    # actualizar campos (si vienen)
+    for k in ["nombre","descripcion","categoria","subcategoria","precio","proveedor","codigo"]:
+        if k in data:
+            setattr(prod, k, data[k])
+    # restaurar preservados (en caso que fueran pasados en data)
+    prod.orden = orden
+    prod.habilitado = habilitado
+
+    session.add(prod)
+    session.commit()
+    session.refresh(prod)
+    return prod
+
+def update_or_create_product_by_data(session, data: dict):
+    """
+    Recibe un dic con keys: codigo, nombre, descripcion, categoria, subcategoria, precio, proveedor
+    Si existe por codigo -> actualiza (sin tocar orden/habilitado). Si no existe -> crea (orden=None, habilitado=True)
+    """
+    codigo = str(data.get("codigo","")).strip()
+    if not codigo:
+        return None
+    existing = get_product_by_codigo(session, codigo)
+    if existing:
+        # construir dict con los campos que actualizamos
+        update_data = {
+            "nombre": data.get("nombre", existing.nombre),
+            "descripcion": data.get("descripcion", existing.descripcion),
+            "categoria": data.get("categoria", existing.categoria),
+            "subcategoria": data.get("subcategoria", existing.subcategoria),
+            "precio": float(data.get("precio", existing.precio or 0.0)),
+            "proveedor": data.get("proveedor", existing.proveedor or "")
+        }
+        return update_product_full(session, codigo, update_data)
+    else:
+        p = Product(
+            codigo = codigo,
+            nombre = data.get("nombre",""),
+            descripcion = data.get("descripcion",""),
+            categoria = data.get("categoria",""),
+            subcategoria = data.get("subcategoria",""),
+            precio = float(data.get("precio", 0.0)),
+            proveedor = data.get("proveedor",""),
+            habilitado = data.get("habilitado", True),  # por defecto true si se crea
+            orden = data.get("orden", None)
+        )
+        session.add(p)
+        session.commit()
+        session.refresh(p)
+        return p
+
+def set_product_habilitado(session, product_id: int = None, codigo: str = None, habilitado: bool = True):
+    """
+    Actualiza el campo habilitado de un producto identificado por id o codigo.
+    """
+    prod = None
+    if product_id:
+        prod = get_product_by_id(session, product_id)
+    elif codigo:
+        prod = get_product_by_codigo(session, codigo)
+    if not prod:
+        return None
+    prod.habilitado = bool(habilitado)
+    session.add(prod)
+    session.commit()
+    session.refresh(prod)
+    return prod
+
+def set_product_orden(session, product_id: int = None, codigo: str = None, orden: int = None):
+    """
+    Actualiza el campo orden de un producto identificado por id o codigo.
+    """
+    prod = None
+    if product_id:
+        prod = get_product_by_id(session, product_id)
+    elif codigo:
+        prod = get_product_by_codigo(session, codigo)
+    if not prod:
+        return None
+    try:
+        prod.orden = int(orden) if orden is not None else None
+    except Exception:
+        prod.orden = None
+    session.add(prod)
+    session.commit()
+    session.refresh(prod)
+    return prod
+
+# funciones para importaciones masivas
+def import_habilitados_from_list(session, codigos_list: List[str], replace_others: bool = False):
+    """
+    Dado un listado de códigos, setea habilitado = True para los códigos de la lista.
+    Si replace_others == True, pone habilitado = False para los productos que NO estén en la lista.
+    Devuelve dict con conteos.
+    """
+    codigos_set = set([str(c).strip() for c in codigos_list if str(c).strip()])
+    updated = 0
+    enabled = 0
+    disabled = 0
+
+    # habilitar los que aparecen
+    for codigo in codigos_set:
+        prod = get_product_by_codigo(session, codigo)
+        if prod:
+            if not prod.habilitado:
+                prod.habilitado = True
+                session.add(prod)
+                updated += 1
+            enabled += 1
+
+    if replace_others:
+        # deshabilitar los que no están
+        prods = session.exec(select(Product)).all()
+        for p in prods:
+            if p.codigo not in codigos_set and p.habilitado:
+                p.habilitado = False
+                session.add(p)
+                disabled += 1
+        updated += disabled
+
+    session.commit()
+    return {"processed": len(codigos_set), "enabled_found": enabled, "updated_total": updated, "disabled_total": disabled}
+
+def import_ordenes_from_mapping(session, mapping: List[dict], match_by: str = "nombre"):
+    """
+    mapping: lista de dicts {"orden": int, "nombre": str} o {"orden": int, "codigo": str}
+    match_by: "nombre" o "codigo"
+    Intenta setear orden por cada fila. Retorna conteos.
+    """
+    updated = 0
+    not_found = []
+    for item in mapping:
+        orden = item.get("orden", None)
+        if orden is None:
+            continue
+        if match_by == "codigo" and item.get("codigo"):
+            prod = get_product_by_codigo(session, str(item.get("codigo")).strip())
+        else:
+            nombre = str(item.get("nombre","")).strip()
+            # intentar match exacto por nombre
+            prod = get_product_by_nombre(session, nombre)
+            # si no match exacto, intentar match parcial
+            if not prod and nombre:
+                prod = session.exec(select(Product).where(Product.nombre.ilike(f"%{nombre}%"))).first()
+        if prod:
+            prod.orden = int(orden)
+            session.add(prod)
+            updated += 1
+        else:
+            not_found.append(item)
+    session.commit()
+    return {"updated": updated, "not_found": not_found}
+
+# ---------- Pedidos (mantengo lo que ya había) ----------
 def create_order(session, order: Order, productos_data: List[dict]):
     # productos_data: lista de dicts {codigo, cantidad, precio_unitario} enviado por cliente
     order.subtotal = 0.0

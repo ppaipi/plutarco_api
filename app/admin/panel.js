@@ -47,28 +47,25 @@ const btnUploadJson = document.getElementById("btn-upload-json");
 const fileCsv = document.getElementById("file-csv");
 const btnUploadCsv = document.getElementById("btn-upload-csv");
 
-// theme toggle (inject button to header actions if not present)
-(function ensureThemeToggle(){
-  const actions = document.querySelector('.actions');
-  if(!actions) return;
-  if(document.getElementById('theme-toggle')) return;
-  const btn = document.createElement('button');
-  btn.id = 'theme-toggle';
-  btn.className = 'btn small ghost';
-  btn.textContent = '🌙';
-  btn.title = 'Toggle theme';
-  actions.prepend(btn);
-  btn.addEventListener('click', toggleTheme);
-  const saved = localStorage.getItem('theme');
-  if(saved === 'dark') document.documentElement.classList.add('dark');
-})();
+// === MODO OSCURO ===
+const themeToggle = document.getElementById("theme-toggle");
 
-function toggleTheme(){
-  document.documentElement.classList.toggle('dark');
-  const isDark = document.documentElement.classList.contains('dark');
-  localStorage.setItem('theme', isDark ? 'dark' : 'light');
-  document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+function applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+
+    themeToggle.textContent = theme === "dark" ? "☀️" : "🌙";
 }
+
+// leer preferencia guardada
+const savedTheme = localStorage.getItem("theme") || "light";
+applyTheme(savedTheme);
+
+// al hacer click, alternar
+themeToggle.addEventListener("click", () => {
+    const current = document.documentElement.getAttribute("data-theme");
+    applyTheme(current === "dark" ? "light" : "dark");
+});
 
 // token helpers
 function setToken(t){

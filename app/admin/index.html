@@ -1,77 +1,124 @@
 <!doctype html>
-<title>Panel Admin — Plutarco</title>
-<link rel="stylesheet" href="style.css">
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Panel Admin — Plutarco</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div id="app">
-<header class="topbar">
-<div class="brand">Plutarco <span class="muted">— Admin</span></div>
-<div class="actions">
-  <button id="theme-toggle" class="btn small ghost">🌙</button>
-  <button id="btn-logout" class="btn ghost" hidden>Salir</button>
-</div>
 
+<header class="topbar">
+  <div class="brand">Plutarco <span class="muted">— Admin</span></div>
+  <div class="actions">
+    <button id="theme-toggle" class="btn small ghost" title="Cambiar tema">🌙</button>
+    <button id="btn-logout" class="btn ghost" hidden>Salir</button>
+  </div>
 </header>
 
 
 <main class="container">
 
+  <!-- LOGIN -->
+  <div id="login-screen" class="card center">
+    <h2>Ingresar al panel</h2>
 
-<!-- LOGIN -->
-<div id="login-screen" class="card center">
-<h2>Ingresar al panel</h2>
-<input id="login-user" placeholder="Usuario" autocomplete="username">
-<input id="login-pass" type="password" placeholder="Contraseña" autocomplete="current-password">
-<button id="btn-login" class="btn primary">Entrar</button>
-<div id="login-msg" class="msg"></div>
-</div>
+    <div class="form-group">
+      <label for="login-user">Usuario</label>
+      <input id="login-user" class="input" placeholder="Usuario" autocomplete="username">
+    </div>
 
+    <div class="form-group">
+      <label for="login-pass">Contraseña</label>
+      <input id="login-pass" class="input" type="password" placeholder="Contraseña" autocomplete="current-password">
+    </div>
 
-<!-- DASHBOARD -->
-<div id="dashboard" class="hidden">
-<section class="controls card">
-<div class="left">
-<input id="search" placeholder="Buscar por nombre o código...">
-<select id="filter-category"><option value="">Todas categorías</option></select>
-<label class="small"><input id="only-enabled" type="checkbox"> Solo habilitados</label>
-</div>
-<div class="right">
-<input id="file-excel" type="file" accept=".xls,.xlsx" hidden>
-<button id="btn-upload-excel" class="btn">Importar Excel</button>
-<input id="file-json" type="file" accept="application/json" hidden>
-<button id="btn-upload-json" class="btn">Importar Habilitados</button>
-<input id="file-csv" type="file" accept=".csv,.txt" hidden>
-<button id="btn-upload-csv" class="btn">Importar Ordenes</button>
-</div>
-</section>
+    <button id="btn-login" class="btn primary full">Entrar</button>
+
+    <div id="login-msg" class="msg"></div>
+  </div>
 
 
-<section class="stats card" id="stats">Cargando...</section>
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="hidden">
+
+    <section class="controls card">
+      <div class="left">
+
+        <div class="form-group">
+          <label for="search">Buscar</label>
+          <input id="search" class="input" placeholder="Buscar por nombre o código...">
+        </div>
+
+        <div class="form-group">
+          <label for="filter-category">Categoría</label>
+          <select id="filter-category" class="input">
+            <option value="">Todas categorías</option>
+          </select>
+        </div>
+
+        <label class="checkbox-label">
+          <input id="only-enabled" type="checkbox">
+          <span>Solo habilitados</span>
+        </label>
+
+      </div>
+
+      <div class="right">
+
+        <div class="upload-group">
+          <button id="btn-upload-excel" class="btn small">📄 Importar Excel</button>
+          <input id="file-excel" type="file" accept=".xls,.xlsx" hidden>
+        </div>
+
+        <div class="upload-group">
+          <button id="btn-upload-json" class="btn small">🔒 Importar Habilitados</button>
+          <input id="file-json" type="file" accept="application/json" hidden>
+        </div>
+
+        <div class="upload-group">
+          <button id="btn-upload-csv" class="btn small">↕ Importar Ordenes</button>
+          <input id="file-csv" type="file" accept=".csv,.txt" hidden>
+        </div>
+
+      </div>
+    </section>
 
 
-<section id="list" class="grid"></section>
+    <section class="stats card" id="stats">Cargando...</section>
 
+    <section id="list" class="grid"></section>
 
-<div class="card pager">
-<button id="btn-load-more" class="btn ghost">Cargar 50 más</button>
-</div>
-</div>
+    <div class="card pager">
+      <button id="btn-load-more" class="btn ghost">Cargar 50 más</button>
+    </div>
 
+  </div>
 
 </main>
 
 
 <!-- IMAGE MODAL -->
 <div id="modal" class="modal" aria-hidden="true">
-<div class="modal-card">
-<h3>Subir imagen</h3>
-<img id="modal-preview" src="" alt="preview"/>
-<input id="modal-file" type="file" accept="image/*">
-<div class="modal-actions">
-<button id="modal-upload" class="btn primary">Subir y reemplazar</button>
-<button id="modal-close" class="btn ghost">Cancelar</button>
-</div>
-</div>
+  <div class="modal-card">
+
+    <h3>Subir imagen</h3>
+
+    <div class="modal-preview-wrapper">
+      <img id="modal-preview" src="" alt="preview" class="modal-preview"/>
+    </div>
+
+    <div class="form-group">
+      <label for="modal-file">Elegir archivo</label>
+      <input id="modal-file" class="input" type="file" accept="image/*">
+    </div>
+
+    <div class="modal-actions">
+      <button id="modal-upload" class="btn primary">Subir y reemplazar</button>
+      <button id="modal-close" class="btn ghost">Cancelar</button>
+    </div>
+
+  </div>
 </div>
 
 

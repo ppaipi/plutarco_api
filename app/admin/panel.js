@@ -48,23 +48,20 @@ const fileCsv = document.getElementById("file-csv");
 const btnUploadCsv = document.getElementById("btn-upload-csv");
 
 // === MODO OSCURO ===
-const themeToggle = document.getElementById("theme-toggle");
+const btnTheme = document.getElementById("theme-toggle");
 
-function applyTheme(theme) {
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-
-    themeToggle.textContent = theme === "dark" ? "☀️" : "🌙";
+// cargar tema guardado
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme === "dark") {
+  document.documentElement.classList.add("dark");
+  btnTheme.textContent = "☀️";
 }
 
-// leer preferencia guardada
-const savedTheme = localStorage.getItem("theme") || "light";
-applyTheme(savedTheme);
-
-// al hacer click, alternar
-themeToggle.addEventListener("click", () => {
-    const current = document.documentElement.getAttribute("data-theme");
-    applyTheme(current === "dark" ? "light" : "dark");
+// evento para cambiar el tema
+btnTheme.addEventListener("click", () => {
+  const isDark = document.documentElement.classList.toggle("dark");
+  btnTheme.textContent = isDark ? "☀️" : "🌙";
+  localStorage.setItem("theme", isDark ? "dark" : "light");
 });
 
 // token helpers
@@ -212,7 +209,7 @@ function renderList(list){
     div.querySelector('.inp-order').addEventListener('change', async (ev)=>{
       const v = Number(ev.target.value) || 0;
       try{
-        await api(`/products/${p.id}/order`, 'PUT', { orden: v });
+        await api(`/api/products/${p.id}/order`, 'PUT', { orden: v });
         p.orden = v;
         await loadProducts(true);
       }catch(err){ alert('No se pudo actualizar orden'); console.error(err); }
@@ -222,7 +219,7 @@ function renderList(list){
     div.querySelector('.inp-enabled').addEventListener('change', async (ev)=>{
       const val = Boolean(ev.target.checked);
       try{
-        await api(`/products/${p.id}/state`, 'PUT', { habilitado: val });
+        await api(`/api/products/${p.id}/state`, 'PUT', { habilitado: val });
         p.habilitado = val;
         renderFiltered();
       }catch(err){ alert('No se pudo actualizar estado'); console.error(err); }
@@ -275,7 +272,7 @@ function renderList(list){
     // save sequentially to backend
     try{
       for(const u of updates){
-        await api(`/products/${u.id}/order`, 'PUT', { orden: u.orden });
+        await api(`/api/products/${u.id}/order`, 'PUT', { orden: u.orden });
       }
       // reload
       await loadProducts(true);
@@ -337,7 +334,7 @@ fileJson.addEventListener('change', async (e)=>{
   const f = e.target.files[0]; if(!f) return;
   const fd = new FormData(); fd.append('file', f);
   try{
-    await api('/products/import-habilitados', 'POST', fd, true);
+    await api('/api/products/import-habilitados', 'POST', fd, true);
     alert('Habilitados importados');
     await loadProducts(true);
   }catch(err){ console.error(err); alert('Error importando JSON') }
@@ -348,7 +345,7 @@ fileCsv.addEventListener('change', async (e)=>{
   const f = e.target.files[0]; if(!f) return;
   const fd = new FormData(); fd.append('file', f);
   try{
-    await api('/products/import-ordenes', 'POST', fd, true);
+    await api('/api/products/import-ordenes', 'POST', fd, true);
     alert('Ordenes importadas');
     await loadProducts(true);
   }catch(err){ console.error(err); alert('Error importando CSV') }

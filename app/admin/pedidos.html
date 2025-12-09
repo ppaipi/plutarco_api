@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Pedidos — Panel Admin Plutarco</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+<header class="topbar">
+  <div class="brand">Plutarco <span class="muted">— Pedidos</span></div>
+  <div class="actions">
+    <button id="theme-toggle" class="btn small ghost">🌙</button>
+    <a href="/admin" class="btn small">Productos</a>
+    <button id="btn-logout" class="btn ghost" hidden>Salir</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="card controls">
+    <div class="left">
+      <input id="search" placeholder="Buscar por nombre, mail o dirección…">
+      <select id="filter-status">
+        <option value="">Todos</option>
+        <option value="pendiente">Pendientes</option>
+        <option value="confirmado">Confirmados</option>
+        <option value="entregado">Entregados</option>
+      </select>
+      <input id="filter-date" type="date">
+    </div>
+
+    <div class="right">
+      <input id="file-excel" type="file" accept=".xls,.xlsx" hidden>
+      <button id="btn-import-excel" class="btn">Importar Excel</button>
+
+      <button id="btn-new-order" class="btn primary">+ Nuevo Pedido</button>
+    </div>
+  </section>
+
+  <section id="orders" class="grid"></section>
+
+  <div class="card pager">
+    <button id="btn-load-more" class="btn ghost">Cargar más</button>
+  </div>
+
+</main>
+
+<!-- MODAL CREAR/EDITAR PEDIDO -->
+<div id="modal-order" class="modal" aria-hidden="true">
+  <div class="modal-card">
+    <h3 id="modal-title">Pedido</h3>
+
+    <div class="form-grid">
+      <label>Nombre<br><input id="o-nombre" class="input"></label>
+      <label>Email<br><input id="o-correo" class="input"></label>
+      <label>Teléfono<br><input id="o-telefono" class="input"></label>
+      <label>Dirección<br><input id="o-direccion" class="input"></label>
+      <label>Día entrega<br><input id="o-dia" type="date" class="input"></label>
+      <label>Envio cobrado<br><input id="o-envio" type="number" class="input"></label>
+      <label>Costo envío real<br><input id="o-costo-envio" type="number" class="input"></label>
+      <label>Confirmado <input id="o-confirmado" type="checkbox"></label>
+      <label>Entregado <input id="o-entregado" type="checkbox"></label>
+    </div>
+
+    <h4>Artículos</h4>
+    <div class="card">
+      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+        <input id="product-search" class="input" placeholder="Buscar producto por nombre o código...">
+        <button id="btn-add-temp" class="btn small">+ Varios (temporal)</button>
+      </div>
+
+      <table id="items-table" style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="text-align:left">
+            <th>Codigo</th><th>Nombre</th><th>Cant</th><th>Precio unit.</th><th>Subtotal</th><th></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+
+      <div style="text-align:right;margin-top:10px">
+        <strong>Subtotal: $<span id="calc-subtotal">0</span></strong>
+      </div>
+    </div>
+
+    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button id="modal-save" class="btn primary">Guardar</button>
+      <button id="modal-cancel" class="btn ghost">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<script src="pedidos.js"></script>
+</div>
+</body>
+</html>

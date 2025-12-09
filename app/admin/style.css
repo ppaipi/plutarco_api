@@ -45,7 +45,7 @@ html,body,#app{ height:100%; }
 
 body{
   margin:0;
-  background:linear-gradient(180deg, #f8fafc 0%, var(--bg) 100%);
+  background: var(--bg);
   color:var(--accent);
   -webkit-font-smoothing:antialiased;
   -moz-osx-font-smoothing:grayscale;
@@ -138,6 +138,11 @@ select{
   background:#0f1628;
 }
 
+input{
+    width:100%;
+    box-sizing:border-box;
+    border-radius: 10px;
+}
 input:focus,
 select:focus{
   outline:none;
@@ -329,13 +334,14 @@ input[type=checkbox]{
   padding:8px 10px;
   border-radius:8px;
   border:1px solid var(--input-border);
-  background:#fff;
+  background:var(--bg);
   cursor:pointer;
+  color: var(--accent);
   transition: background .2s;
 }
 
 .thumb-button:hover{
-  background:#f0f4ff;
+  background:var(--glass);
 }
 
 /* =========================================================

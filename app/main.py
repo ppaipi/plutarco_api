@@ -53,8 +53,16 @@ def on_startup():
 # -------------------------
 # Archivos estáticos (panel admin)
 # -------------------------
-app.mount("/admin", StaticFiles(directory="app/admin"), name="admin")
+# Redirección manual a index.html
+@app.get("/admin")
+async def admin_root():
+    file_path = os.path.join("app", "admin", "index.html")
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Archivo no encontrado")
+    return FileResponse(file_path)
 
+# Servir archivos estáticos
+app.mount("/admin", StaticFiles(directory="app/admin"), name="admin")
 
 # -------------------------
 # LOGIN ADMIN (para tu panel HTML)
@@ -71,18 +79,17 @@ def admin_login(
 
     raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
-app.mount("/panel", StaticFiles(directory="app/admin"), name="panel")
-
 # -------------------------
 # MIDDLEWARE DE API KEY
 # -------------------------
 PROTECTED_PATHS = [
-    "/products/import",
-    "/products/import-habilitados",
-    "/products/import-ordenes",
-    "/products/",      # cambiar orden/estado
-    "/orders",         # ver/editar pedidos
+    "/api/products/import",
+    "/api/products/import-habilitados",
+    "/api/products/import-ordenes",
+    "/api/products/",    
+    "/api/orders",
 ]
+
 
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
@@ -107,13 +114,14 @@ async def api_key_middleware(request: Request, call_next):
 @app.get("/api/products", response_model=List[Product])
 def api_get_products():
     with get_session() as session:
-        return session.exec(select(Product)).all()
+        stmt = select(Product).order_by(Product.orden.asc())
+        return session.exec(stmt).all()
 
-
-@app.get("/api/products/habilitados", response_model=List[Product])
-def api_list_habilitados():
+@app.get("/api/products/enabled", response_model=List[Product])
+def api_get_enabled():
     with get_session() as session:
-        return session.exec(select(Product).where(Product.habilitado == True)).all()
+        stmt = select(Product).where(Product.habilitado == True).order_by(Product.orden.asc())
+        return session.exec(stmt).all()
 
 
 @app.get("/api/products/by-codigo/{codigo}", response_model=Product)
@@ -199,12 +207,17 @@ def api_set_product_state(product_id: int, payload: dict = Body(...)):
 def api_set_product_order(product_id: int, payload: dict = Body(...)):
     if "orden" not in payload:
         raise HTTPException(status_code=400, detail="Falta 'orden'")
+
     with get_session() as session:
-        prod = set_product_orden(session, product_id=product_id, orden=payload["orden"])
+        prod = session.get(Product, product_id)
         if not prod:
             raise HTTPException(status_code=404, detail="Producto no encontrado")
-        return {"ok": True, "product": prod}
 
+        prod.orden = payload["orden"]
+        session.add(prod)
+        session.commit()
+        session.refresh(prod)
+        return {"ok": True, "product": prod}
 
 # -------------------------
 # IMPORTAR HABILITADOS (ADMIN)
@@ -333,7 +346,7 @@ def api_get_order(order_id: int):
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
         prods = session.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
         return {"order": order, "productos": prods}
-@app.post("/products/{codigo}/upload-image")
+@app.post("/api/products/{codigo}/upload-image")
 async def upload_image(
     codigo: str,
     file: UploadFile = File(...),
@@ -370,3 +383,10 @@ async def upload_image(
             "ok": True,
             "imagen_url": product.imagen_url
         }
+@app.get("/api/products/no-image", response_model=List[Product])
+def api_get_no_image():
+    with get_session() as session:
+        stmt = select(Product).where(
+            (Product.imagen_url == None) | (Product.imagen_url == "")
+        ).order_by(Product.orden.asc())
+        return session.exec(stmt).all()

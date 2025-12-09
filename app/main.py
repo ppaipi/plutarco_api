@@ -1,7 +1,7 @@
 # app/main.py
-from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Body
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Body, Request, Form
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse, FileResponse
 
 from sqlmodel import Session, select
 from .database import engine, init_db, get_session
@@ -27,23 +27,23 @@ import os
 # Cargar variables de entorno
 # -------------------------
 load_dotenv()
-
-ADMIN_USER = os.getenv("ADMIN_USER", "admin")
-ADMIN_PASS = os.getenv("ADMIN_PASS", "1234")
-SECRET_TOKEN = os.getenv("SECRET_TOKEN", "supersecret-token")
-
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/admin/login")
-
-def require_admin(token: str = Depends(oauth2_scheme)):
-    if token != SECRET_TOKEN:
-        raise HTTPException(status_code=401, detail="No autorizado")
-    return True
+IMAGES_DIR = "/data/images"
+os.makedirs(IMAGES_DIR, exist_ok=True)
+ADMIN_USER = os.getenv("ADMIN_USER")
+ADMIN_PASS = os.getenv("ADMIN_PASS")
+API_KEY = os.getenv("API_KEY")
 
 
 # -------------------------
 # Inicializar API
 # -------------------------
 app = FastAPI(title="API Pedidos y Productos - extendida")
+@app.get("/images/{filename}")
+def serve_image(filename: str):
+    filepath = os.path.join(IMAGES_DIR, filename)
+    if not os.path.exists(filepath):
+        raise HTTPException(404, "Imagen no encontrada")
+    return FileResponse(filepath)
 
 @app.on_event("startup")
 def on_startup():
@@ -51,37 +51,72 @@ def on_startup():
 
 
 # -------------------------
-# Archivos estáticos para panel admin
+# Archivos estáticos (panel admin)
 # -------------------------
 app.mount("/admin", StaticFiles(directory="app/admin"), name="admin")
 
 
 # -------------------------
-# LOGIN ADMIN
+# LOGIN ADMIN (para tu panel HTML)
 # -------------------------
-@app.post("/admin/login")
-def admin_login(form: OAuth2PasswordRequestForm = Depends()):
-    if form.username == ADMIN_USER and form.password == ADMIN_PASS:
-        return {"access_token": SECRET_TOKEN, "token_type": "bearer"}
+
+@app.post("/api/admin/login")
+def admin_login(
+    username: str = Form(...),
+    password: str = Form(...)
+):
+
+    if username == ADMIN_USER and password == ADMIN_PASS:
+        return {"access_token": API_KEY, "token_type": "bearer"}
+
     raise HTTPException(status_code=401, detail="Credenciales incorrectas")
+
+app.mount("/panel", StaticFiles(directory="app/admin"), name="panel")
+
+# -------------------------
+# MIDDLEWARE DE API KEY
+# -------------------------
+PROTECTED_PATHS = [
+    "/products/import",
+    "/products/import-habilitados",
+    "/products/import-ordenes",
+    "/products/",      # cambiar orden/estado
+    "/orders",         # ver/editar pedidos
+]
+
+@app.middleware("http")
+async def api_key_middleware(request: Request, call_next):
+    path = request.url.path
+
+    # Determinar si la ruta debe estar protegida
+    if any(path.startswith(p) for p in PROTECTED_PATHS):
+
+        key = request.headers.get("x-api-key")
+        if key != API_KEY:
+            return JSONResponse(
+                {"error": "Unauthorized - Missing or invalid API Key"},
+                status_code=401
+            )
+
+    return await call_next(request)
 
 
 # -------------------------
 # Productos (PÚBLICOS)
 # -------------------------
-@app.get("/products", response_model=List[Product])
+@app.get("/api/products", response_model=List[Product])
 def api_get_products():
     with get_session() as session:
         return session.exec(select(Product)).all()
 
 
-@app.get("/products/habilitados", response_model=List[Product])
+@app.get("/api/products/habilitados", response_model=List[Product])
 def api_list_habilitados():
     with get_session() as session:
         return session.exec(select(Product).where(Product.habilitado == True)).all()
 
 
-@app.get("/products/by-codigo/{codigo}", response_model=Product)
+@app.get("/api/products/by-codigo/{codigo}", response_model=Product)
 def api_get_product_by_codigo(codigo: str):
     with get_session() as session:
         prod = get_product_by_codigo(session, codigo)
@@ -93,11 +128,8 @@ def api_get_product_by_codigo(codigo: str):
 # -------------------------
 # IMPORTAR PRODUCTOS (ADMIN)
 # -------------------------
-@app.post("/products/import")
-async def import_products(
-    file: UploadFile = File(...),
-    admin: bool = Depends(require_admin)
-):
+@app.post("/api/products/import")
+async def import_products(file: UploadFile = File(...)):
     if not file.filename.lower().endswith((".xlsx", ".xls")):
         raise HTTPException(status_code=400, detail="Archivo debe ser .xlsx o .xls")
 
@@ -115,7 +147,6 @@ async def import_products(
                 str(row.get("DESCRIPCION LARGA", "")).strip()
                 or str(row.get("DESCRIPCION", "")).strip()
             )
-
             if not codigo or not nombre:
                 skipped += 1
                 continue
@@ -153,12 +184,8 @@ async def import_products(
 # -------------------------
 # CAMBIAR ESTADO/ORDEN (ADMIN)
 # -------------------------
-@app.put("/products/{product_id}/state")
-def api_set_product_state(
-    product_id: int,
-    payload: dict = Body(...),
-    admin: bool = Depends(require_admin)
-):
+@app.put("/api/products/{product_id}/state")
+def api_set_product_state(product_id: int, payload: dict = Body(...)):
     if "habilitado" not in payload:
         raise HTTPException(status_code=400, detail="Falta 'habilitado'")
     with get_session() as session:
@@ -168,12 +195,8 @@ def api_set_product_state(
         return {"ok": True, "product": prod}
 
 
-@app.put("/products/{product_id}/order")
-def api_set_product_order(
-    product_id: int,
-    payload: dict = Body(...),
-    admin: bool = Depends(require_admin)
-):
+@app.put("/api/products/{product_id}/order")
+def api_set_product_order(product_id: int, payload: dict = Body(...)):
     if "orden" not in payload:
         raise HTTPException(status_code=400, detail="Falta 'orden'")
     with get_session() as session:
@@ -186,11 +209,8 @@ def api_set_product_order(
 # -------------------------
 # IMPORTAR HABILITADOS (ADMIN)
 # -------------------------
-@app.post("/products/import-habilitados")
-async def api_import_habilitados(
-    file: UploadFile = File(...),
-    admin: bool = Depends(require_admin)
-):
+@app.post("/api/products/import-habilitados")
+async def api_import_habilitados(file: UploadFile = File(...)):
     if not file.filename.lower().endswith(".json"):
         raise HTTPException(status_code=400, detail="Archivo debe ser .json")
 
@@ -217,11 +237,10 @@ async def api_import_habilitados(
 # -------------------------
 # IMPORTAR ORDENES (ADMIN)
 # -------------------------
-@app.post("/products/import-ordenes")
+@app.post("/api/products/import-ordenes")
 async def api_import_ordenes(
     file: UploadFile = File(...),
-    match_by: Optional[str] = "nombre",
-    admin: bool = Depends(require_admin)
+    match_by: Optional[str] = "nombre"
 ):
     if not file.filename.lower().endswith((".csv", ".txt")):
         raise HTTPException(status_code=400, detail="Archivo debe ser .csv")
@@ -231,13 +250,23 @@ async def api_import_ordenes(
 
     mapping = []
     for row in reader:
-        if len(row) >= 2:
-            orden = int(row[0].strip())
-            val = row[1].strip()
-            mapping.append(
-                {"orden": orden, "codigo": val} if match_by == "codigo"
-                else {"orden": orden, "nombre": val}
-            )
+        if len(row) < 2:
+            continue
+
+        raw_orden = row[0].strip()
+        val = row[1].strip()
+
+        # ❌ Si la primera columna NO es un número, la saltamos (headers)
+        if not raw_orden.isdigit():
+            continue
+
+        orden = int(raw_orden)
+
+        mapping.append(
+            {"orden": orden, "codigo": val} if match_by == "codigo"
+            else {"orden": orden, "nombre": val}
+        )
+
 
     with get_session() as session:
         result = import_ordenes_from_mapping(session, mapping, match_by=match_by)
@@ -248,7 +277,7 @@ async def api_import_ordenes(
 # -------------------------
 # PEDIDOS (PÚBLICOS)
 # -------------------------
-@app.post("/orders")
+@app.post("/api/orders")
 def api_create_order(payload: dict):
     required = ["nombre_completo", "correo", "productos"]
     for r in required:
@@ -280,7 +309,7 @@ def api_create_order(payload: dict):
         return {"order": new_order, "productos": prods}
 
 
-@app.put("/orders/{order_id}")
+@app.put("/api/orders/{order_id}")
 def api_update_order(order_id: int, payload: dict):
     with get_session() as session:
         updated = update_order(session, order_id, payload)
@@ -290,13 +319,13 @@ def api_update_order(order_id: int, payload: dict):
         return {"order": updated, "productos": prods}
 
 
-@app.get("/orders")
+@app.get("/api/orders")
 def api_list_orders():
     with get_session() as session:
         return session.exec(select(Order)).all()
 
 
-@app.get("/orders/{order_id}")
+@app.get("/api/orders/{order_id}")
 def api_get_order(order_id: int):
     with get_session() as session:
         order = session.get(Order, order_id)
@@ -304,3 +333,40 @@ def api_get_order(order_id: int):
             raise HTTPException(status_code=404, detail="Pedido no encontrado")
         prods = session.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
         return {"order": order, "productos": prods}
+@app.post("/products/{codigo}/upload-image")
+async def upload_image(
+    codigo: str,
+    file: UploadFile = File(...),
+    request: Request = None
+):
+    # Validar extensión
+    allowed = ["jpg", "jpeg", "png", "webp"]
+    ext = file.filename.split(".")[-1].lower()
+    if ext not in allowed:
+        raise HTTPException(400, "Formato inválido")
+
+    # Buscar producto
+    with get_session() as session:
+        product = session.exec(select(Product).where(Product.codigo == codigo)).first()
+        if not product:
+            raise HTTPException(404, "Producto no encontrado")
+
+        # Guardar archivo
+        filename = f"{codigo}.{ext}"
+        save_path = os.path.join(IMAGES_DIR, filename)
+
+        with open(save_path, "wb") as f:
+            f.write(await file.read())
+
+        # Guardar URL en la BD
+        base_url = str(request.base_url).rstrip("/")
+        product.imagen_url = f"{base_url}/images/{filename}"
+
+        session.add(product)
+        session.commit()
+        session.refresh(product)
+
+        return {
+            "ok": True,
+            "imagen_url": product.imagen_url
+        }

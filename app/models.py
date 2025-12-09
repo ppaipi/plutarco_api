@@ -16,6 +16,7 @@ class Product(SQLModel, table=True):
     # Nuevos campos pedidos
     habilitado: bool = Field(default=True, index=True)   # true = habilitado
     orden: Optional[int] = Field(default=None, index=True)  # orden de visibilidad (1,2,3,...)
+    imagen_url: str | None = None
 
 class OrderProduct(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

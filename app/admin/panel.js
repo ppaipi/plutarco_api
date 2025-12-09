@@ -1,0 +1,322 @@
+/* panel.js - Panel Admin Plutarco
+   Requisitos backend:
+   - POST /api/admin/login  (form-urlencoded) -> {access_token}
+   - GET  /products
+   - PUT  /products/{id}/state    Body JSON {habilitado: true/false}
+   - PUT  /products/{id}/order    Body JSON {orden: int}
+   - POST /products/{codigo}/upload-image  (FormData file)
+   - POST /products/import (FormData file)
+   - POST /products/import-habilitados (FormData file)
+   - POST /products/import-ordenes (FormData file)
+*/
+
+const API_BASE = ""; // raíz relativa
+
+// state
+let token = localStorage.getItem("token") || null;
+let products = [];
+let displayedCount = 50;
+const PAGE_STEP = 50;
+let currentEditCodigo = null;
+
+// DOM
+const loginScreen = document.getElementById("login-screen");
+const dashboard = document.getElementById("dashboard");
+const btnLogin = document.getElementById("btn-login");
+const loginMsg = document.getElementById("login-msg");
+const btnLogout = document.getElementById("btn-logout");
+const listEl = document.getElementById("list");
+const statsEl = document.getElementById("stats");
+const searchInput = document.getElementById("search");
+const categorySelect = document.getElementById("filter-category");
+const onlyEnabledCheckbox = document.getElementById("only-enabled");
+const loadMoreBtn = document.getElementById("btn-load-more");
+
+// modal elements (IDs from your HTML)
+const modal = document.getElementById("modal");
+const modalPreview = document.getElementById("modal-preview");
+const modalFile = document.getElementById("modal-file");
+const modalUpload = document.getElementById("modal-upload");
+const modalClose = document.getElementById("modal-close");
+
+// file inputs
+const fileExcel = document.getElementById("file-excel");
+const btnUploadExcel = document.getElementById("btn-upload-excel");
+const fileJson = document.getElementById("file-json");
+const btnUploadJson = document.getElementById("btn-upload-json");
+const fileCsv = document.getElementById("file-csv");
+const btnUploadCsv = document.getElementById("btn-upload-csv");
+
+// utils
+const placeholder = "noimg.png"; // coloca un noimg.png en app/admin o cambia la ruta
+
+function setToken(t){
+  token = t;
+  if(t) localStorage.setItem("token", t);
+  else localStorage.removeItem("token");
+}
+
+function showLogin(){ loginScreen.classList.remove("hidden"); dashboard.classList.add("hidden"); btnLogout.hidden = true }
+function showDashboard(){ loginScreen.classList.add("hidden"); dashboard.classList.remove("hidden"); btnLogout.hidden = false }
+
+// api helper
+async function api(path, method="GET", body=null, isForm=false){
+  const headers = {};
+  if(token) headers["x-api-key"] = token;
+  // don't set Content-Type for FormData
+  if(!isForm && body) headers["Content-Type"] = "application/json";
+
+  const opts = { method, headers };
+  if(body) opts.body = isForm ? body : JSON.stringify(body);
+
+  const res = await fetch(API_BASE + path, opts);
+  if(!res.ok){
+    const txt = await res.text();
+    throw new Error(txt || res.status);
+  }
+  if(res.status === 204) return null;
+  return res.json();
+}
+
+// ---------- LOGIN ----------
+btnLogin.addEventListener("click", async ()=>{
+  loginMsg.textContent = "";
+  const user = document.getElementById("login-user").value.trim();
+  const pass = document.getElementById("login-pass").value.trim();
+  if(!user || !pass){ loginMsg.textContent = "Completá usuario y contraseña"; return; }
+
+  try{
+    const form = new URLSearchParams();
+    form.append("username", user);
+    form.append("password", pass);
+
+    const res = await fetch(API_BASE + "/api/admin/login", { method: "POST", body: form });
+    if(!res.ok) throw new Error("Login failed");
+    const data = await res.json();
+    setToken(data.access_token);
+    showDashboard();
+    await loadProducts(true);
+  }catch(e){
+    console.error(e);
+    loginMsg.textContent = "Credenciales incorrectas";
+  }
+});
+
+btnLogout.addEventListener("click", ()=>{
+  setToken(null);
+  showLogin();
+});
+
+// ---------- PRODUCTS ----------
+async function loadProducts(force=false){
+  try{
+    statsEl.textContent = "Cargando productos...";
+    const all = await api("/products");
+    products = all || [];
+    populateCategories();
+    displayedCount = PAGE_STEP;
+    renderFiltered();
+    statsEl.textContent = `Productos: ${products.length}`;
+  }catch(e){
+    console.error(e);
+    statsEl.textContent = "Error cargando productos";
+  }
+}
+
+function populateCategories(){
+  const cats = Array.from(new Set(products.map(p=> (p.categoria||"").trim()).filter(Boolean)));
+  // clear
+  categorySelect.innerHTML = '<option value="">Todas categorías</option>';
+  cats.sort().forEach(c=>{
+    const op = document.createElement("option");
+    op.value = c; op.textContent = c;
+    categorySelect.appendChild(op);
+  });
+}
+
+// search + filter
+let searchTerm = "";
+let searchTimer = null;
+searchInput.addEventListener("input", (e)=>{
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(()=>{
+    searchTerm = e.target.value.trim().toLowerCase();
+    renderFiltered();
+  }, 220);
+});
+
+categorySelect.addEventListener("change", ()=> renderFiltered());
+onlyEnabledCheckbox.addEventListener("change", ()=> renderFiltered());
+
+function renderFiltered(){
+  let list = products.slice();
+
+  // only enabled filter
+  if(onlyEnabledCheckbox.checked){
+    list = list.filter(p => p.habilitado === true);
+  }
+
+  // category filter
+  const cat = categorySelect.value;
+  if(cat){
+    list = list.filter(p => (p.categoria || "").toLowerCase() === cat.toLowerCase());
+  }
+
+  // search filter
+  if(searchTerm){
+    list = list.filter(p => {
+      const hay = (p.nombre || "") + " " + (p.codigo || "") + " " + (p.descripcion || "");
+      return hay.toLowerCase().includes(searchTerm);
+    });
+  }
+
+  renderList(list.slice(0, displayedCount));
+  // show/hide load more
+  if(list.length > displayedCount) loadMoreBtn.classList.remove("hidden");
+  else loadMoreBtn.classList.add("hidden");
+
+  statsEl.textContent = `Mostrando ${Math.min(displayedCount, list.length)} de ${list.length}`;
+}
+
+function renderList(list){
+  listEl.innerHTML = "";
+  if(list.length === 0){
+    listEl.innerHTML = '<div class="no-results card">No hay productos que mostrar</div>';
+    return;
+  }
+
+  list.forEach(p=>{
+    const div = document.createElement("div");
+    div.className = "product-card card";
+
+    const imagen = p.imagen_url ? p.imagen_url : placeholder;
+
+    div.innerHTML = `
+      <div class="thumb"><img src="${escapeHtml(imagen)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='${placeholder}'"></div>
+      <div class="meta">
+        <h4 title="${escapeHtml(p.nombre)}">${escapeHtml(p.nombre)}</h4>
+        <p class="small">${escapeHtml(p.codigo)} • ${escapeHtml(p.categoria || '')}</p>
+
+        <div class="row">
+          <label class="small">Orden:
+            <input type="number" class="inp-order" value="${p.orden || 0}" min="0" style="width:90px">
+          </label>
+
+          <label class="small">Habilitado:
+            <input type="checkbox" class="inp-enabled" ${p.habilitado ? "checked":""}>
+          </label>
+
+          <button class="thumb-button btn-img">Imagen</button>
+        </div>
+      </div>
+    `;
+
+    // events
+    const orderInput = div.querySelector(".inp-order");
+    orderInput.addEventListener("change", async (ev)=>{
+      const val = Number(ev.target.value) || 0;
+      try{
+        await api(`/products/${p.id}/order`, "PUT", { orden: val });
+        p.orden = val;
+      }catch(err){ alert("No se pudo actualizar orden") }
+    });
+
+    const enabledInput = div.querySelector(".inp-enabled");
+    enabledInput.addEventListener("change", async (ev)=>{
+      const val = Boolean(ev.target.checked);
+      try{
+        await api(`/products/${p.id}/state`, "PUT", { habilitado: val });
+        p.habilitado = val;
+        renderFiltered();
+      }catch(err){ alert("No se pudo actualizar estado") }
+    });
+
+    const imgBtn = div.querySelector(".btn-img");
+    imgBtn.addEventListener("click", ()=>{
+      currentEditCodigo = p.codigo; // upload endpoint expects codigo
+      modalPreview.src = p.imagen_url ? p.imagen_url : placeholder;
+      modalFile.value = "";
+      modal.setAttribute("aria-hidden", "false");
+    });
+
+    listEl.appendChild(div);
+  });
+}
+
+// load more
+loadMoreBtn.addEventListener("click", ()=>{
+  displayedCount += PAGE_STEP;
+  renderFiltered();
+});
+
+// ---------- MODAL ----------
+modalClose.addEventListener("click", ()=> modal.setAttribute("aria-hidden","true"));
+
+modalFile.addEventListener("change", (e)=>{
+  const f = e.target.files[0];
+  if(!f) return;
+  const url = URL.createObjectURL(f);
+  modalPreview.src = url;
+});
+
+modalUpload.addEventListener("click", async ()=>{
+  const f = modalFile.files[0];
+  if(!f){ alert("Elegí una imagen"); return; }
+
+  // filename ext validation
+  const ext = f.name.split('.').pop().toLowerCase();
+  if(!["jpg","jpeg","png","webp"].includes(ext)){ alert("Formato inválido (jpg/png/webp)"); return; }
+
+  const fd = new FormData();
+  fd.append("file", f);
+
+  try{
+    await api(`/products/${currentEditCodigo}/upload-image`, "POST", fd, true);
+    modal.setAttribute("aria-hidden","true");
+    await loadProducts(true);
+    alert("Imagen subida correctamente");
+  }catch(err){
+    console.error(err);
+    alert("Error subiendo imagen: " + (err.message || err));
+  }
+});
+
+// ---------- IMPORTERS ----------
+btnUploadExcel.addEventListener("click", ()=> fileExcel.click());
+fileExcel.addEventListener("change", async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append("file", f);
+  try{
+    const r = await api("/products/import", "POST", fd, true);
+    alert(`Import: ${r.created} creados, ${r.updated} actualizados, ${r.skipped} saltados`);
+    await loadProducts(true);
+  }catch(err){ alert("Error importando Excel: " + err.message) }
+});
+
+btnUploadJson.addEventListener("click", ()=> fileJson.click());
+fileJson.addEventListener("change", async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append("file", f);
+  try{
+    await api("/products/import-habilitados", "POST", fd, true);
+    alert("Habilitados importados");
+    await loadProducts(true);
+  }catch(err){ alert("Error importando JSON: " + err.message) }
+});
+
+btnUploadCsv.addEventListener("click", ()=> fileCsv.click());
+fileCsv.addEventListener("change", async (e)=>{
+  const f = e.target.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append("file", f);
+  try{
+    await api("/products/import-ordenes", "POST", fd, true);
+    alert("Ordenes importadas");
+    await loadProducts(true);
+  }catch(err){ alert("Error importando CSV: " + err.message) }
+});
+
+// helpers
+function escapeHtml(s){ if(!s) return ""; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// init
+if(token) { showDashboard(); loadProducts(true); } else { showLogin(); }

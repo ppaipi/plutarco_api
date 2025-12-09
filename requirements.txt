@@ -1,6 +1,8 @@
-fastapi==0.100.0
-uvicorn[standard]==0.22.0
-sqlmodel==0.0.8
-pandas==2.1.2
-openpyxl==3.1.2
-python-multipart==0.0.6    # para upload de archivos en forms
+fastapi
+uvicorn[standard]
+sqlmodel
+sqlalchemy
+pandas
+openpyxl
+python-multipart
+python-dotenv

@@ -92,95 +92,83 @@ async function loadOrders(){
 
 // ===================== RENDER ORDERS =====================
 function render() {
+  if (!listEl) return;
+  listEl.innerHTML = '';
 
-  const month = document.getElementById("filter-month").value;
-  const sortDir = document.getElementById("filter-sort").value;
+  const q = (search.value || '').toLowerCase();
+  const state = filterStatus.value;
+  const exactDate = filterDate.value;
+  const monthFilter = filterMonth.value;
+  const sortDir = filterSort.value || 'desc';
 
-  let pageSize = (page + 1) * PAGE_SIZE;
-
-  // === FILTRAR POR MES ===
-  const filtered = orders.filter(o => {
-    if (month) {
-      // si no existe dia_entrega o no empieza con "YYYY-MM"
-      if (!o.dia_entrega || !o.dia_entrega.startsWith(month)) {
-        return false;
-      }
+  let filtered = orders.filter(o => {
+    if (q) {
+      const s = `${o.nombre_completo||''} ${o.correo||''} ${o.direccion||''}`.toLowerCase();
+      if (!s.includes(q)) return false;
     }
+
+    if (state === 'pendiente' && (o.confirmado || o.entregado)) return false;
+    if (state === 'confirmado' && !o.confirmado) return false;
+    if (state === 'entregado' && !o.entregado) return false;
+
+    if (exactDate && o.dia_entrega !== exactDate) return false;
+
+    if (monthFilter) {
+      const month = o.dia_entrega ? o.dia_entrega.slice(0,7) : '';
+      if (month !== monthFilter) return false;
+    }
+
     return true;
   });
 
-  // === ORDEN ASC/DESC ===
-  const ordered = filtered.sort((a, b) => {
-    const da = a.dia_entrega || "";
-    const db = b.dia_entrega || "";
-
-    return sortDir === "asc"
-      ? da.localeCompare(db)  // más antiguo primero
-      : db.localeCompare(da); // más nuevo primero
+  // ORDENACIÓN por fecha
+  filtered.sort((a,b)=>{
+    const da = a.dia_entrega || '0000-00-00';
+    const db = b.dia_entrega || '0000-00-00';
+    return sortDir === 'asc'
+      ? da.localeCompare(db)
+      : db.localeCompare(da);
   });
 
-  // === PAGINACIÓN ===
-  const slice = ordered.slice(0, pageSize);
-
-  // === LIMPIAR LISTA ===
-  listEl.innerHTML = "";
+  // PAGINADO
+  const slice = filtered.slice(0, (page+1)*PAGE_SIZE);
 
   if (slice.length === 0) {
-    listEl.innerHTML = `
-      <div class="no-results card">
-        No hay pedidos para este filtro
-      </div>`;
+    listEl.innerHTML = `<div class="card no-results">No hay pedidos</div>`;
     return;
   }
 
-  // === RENDERIZAR CADA PEDIDO ===
-  slice.forEach(o => {
+  // RENDER
+  for (const o of slice) {
+    const total = Number(o.envio_cobrado || 0);
 
-    const card = document.createElement("div");
-    card.className = "order-card";
+    const card = document.createElement('div');
+    card.className = 'order-card';
 
     card.innerHTML = `
-      <div class="header">
-        <h3>Pedido #${escapeHtml(o.id)} — ${escapeHtml(o.nombre || "")}</h3>
-        <span class="date">${escapeHtml(o.dia_entrega || "-")}</span>
-      </div>
+      <h3>
+        <span>${escapeHtml(o.nombre_completo || '—')}</span>
+        <span class="muted small">#${o.id}</span>
+      </h3>
+      <p class="small">${escapeHtml(o.correo || '')}</p>
+      <p class="small">${escapeHtml(o.telefono || '')} • ${escapeHtml(o.direccion || '')}</p>
+      <p class="small">Entrega: <b>${o.dia_entrega || '-'}</b></p>
+      <p class="small">Total: $${total}</p>
 
-      <div class="row">
-        <strong>Email:</strong> ${escapeHtml(o.email || "")}
-      </div>
-      <div class="row">
-        <strong>Teléfono:</strong> ${escapeHtml(o.telefono || "")}
-      </div>
-
-      <div class="row">
-        <strong>Dirección:</strong> ${escapeHtml(o.direccion || "")}
-      </div>
-
-      <div class="row">
-        <strong>Productos:</strong>
-        <div class="prod-box">${escapeHtml(o.productos || "")}</div>
-      </div>
-
-      <div class="row">
-        <strong>Total:</strong> $${escapeHtml(o.total || "0")}
-      </div>
-
-      <div class="row">
-        <button class="btn small" data-edit="${o.id}">Editar</button>
-        <button class="btn small btn-danger" data-delete="${o.id}">Eliminar</button>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn small" data-id="${o.id}" data-action="edit">Ver / Editar</button>
+        <button class="btn ghost small" data-id="${o.id}" data-action="print">Imprimir</button>
+        <button class="btn danger small" data-id="${o.id}" data-action="delete">Eliminar</button>
       </div>
     `;
 
-    listEl.appendChild(card);
-  });
+    card.querySelector('button[data-action="edit"]').onclick = ()=> openEdit(o);
+    card.querySelector('button[data-action="delete"]').onclick = ()=> confirmAndDelete(o.id);
 
-  // === BOTÓN "CARGAR MÁS" ===
-  if (ordered.length > pageSize) {
-    btnLoadMore.classList.remove("hidden");
-  } else {
-    btnLoadMore.classList.add("hidden");
+    listEl.appendChild(card);
   }
 }
+
 
 
 // ===================== ESCAPE HTML =====================
@@ -509,8 +497,14 @@ btnLoadMore.addEventListener('click', ()=> { page++; render(); });
 search.addEventListener('input', ()=> { page = 0; render(); });
 filterStatus.addEventListener('change', ()=> { page = 0; render(); });
 filterDate.addEventListener('change', ()=> { page = 0; render(); });
+filterMonth.addEventListener("change", () => {
+  page = 0;
+  render();
+});
 
 // init
-loadOrders();
-populateMonths();
-render();
+(async () => {
+  await loadOrders();   // << aseguramos que orders ya está cargado
+  populateMonths();      // << ahora sí hay meses
+  render();              // << y recién acá renderizamos
+})();

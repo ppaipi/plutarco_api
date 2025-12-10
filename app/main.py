@@ -581,3 +581,15 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                 errors.append(f"Fila {idx+1}: {str(e)}")
 
     return {"created": created, "errors": errors}
+@app.delete("/api/orders/delete/all")
+def delete_all_orders():
+    with get_session() as session:
+        # 1) Borrar primero todos los OrderProduct
+        session.query(OrderProduct).delete()
+
+        # 2) Luego borrar todos los Order
+        session.query(Order).delete()
+
+        session.commit()
+
+        return {"ok": True, "message": "Todos los pedidos eliminados"}

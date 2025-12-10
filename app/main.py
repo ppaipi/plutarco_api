@@ -26,62 +26,6 @@ import os
 import re
 from decimal import Decimal
 
-import re
-
-def parse_productos_celda(celda: str):
-    """
-    Parsea una celda de productos en formato A o B.
-    Devuelve lista de:
-    {codigo, nombre, cantidad, precio_unitario}
-    """
-    if not celda or not celda.strip():
-        return []
-
-    productos = []
-    partes = [p.strip() for p in celda.split(",") if p.strip()]
-
-    for parte in partes:
-        # ----- Formato B -----
-        # COD|Nombre|Cantidad|Precio
-        if "|" in parte:
-            cols = [c.strip() for c in parte.split("|")]
-            if len(cols) == 4:
-                codigo, nombre, cant, precio = cols
-                try:
-                    productos.append({
-                        "codigo": codigo,
-                        "nombre": nombre,
-                        "cantidad": int(cant),
-                        "precio_unitario": float(str(precio).replace(".", "").replace(",", ".")),
-                    })
-                    continue
-                except:
-                    pass  # intentar formato A
-
-        # ----- Formato A -----
-        # "Pan x1 ($2600)"
-        match = re.match(r"(.+?)\s*x\s*(\d+)\s*\(\s*\$?\s*([\d\.,]+)\s*\)", parte)
-        if match:
-            nombre = match.group(1).strip()
-            cantidad = int(match.group(2))
-            precio_raw = match.group(3)
-
-            try:
-                precio = float(precio_raw.replace(".", "").replace(",", "."))
-                productos.append({
-                    "codigo": None,
-                    "nombre": nombre,
-                    "cantidad": cantidad,
-                    "precio_unitario": precio,
-                })
-                continue
-            except:
-                pass
-
-        print("Producto inválido ignorado:", parte)
-
-    return productos
-
 
 # -------------------------
 # Cargar variables de entorno
@@ -114,15 +58,23 @@ def on_startup():
 # Archivos estáticos (panel admin)
 # -------------------------
 # Redirección manual a index.html
-@app.get("/admin")
+@app.get("/admin/")
 async def admin_root():
     file_path = os.path.join("app", "admin", "index.html")
-    if not os.path.exists(file_path):
-        raise HTTPException(status_code=404, detail="Archivo no encontrado")
     return FileResponse(file_path)
+
 
 # Servir archivos estáticos
 app.mount("/admin", StaticFiles(directory="app/admin"), name="admin")
+
+@app.get("/pedidos/")
+async def admin_root():
+    file_path = os.path.join("app", "admin", "pedidos.html")
+    return FileResponse(file_path)
+
+
+# Servir archivos estáticos
+app.mount("/pedidos", StaticFiles(directory="app/admin"), name="pedidos")
 
 # -------------------------
 # LOGIN ADMIN (para tu panel HTML)
@@ -543,10 +495,12 @@ def api_products_search(q: Optional[str] = None, limit: int = 20):
 @app.post("/api/orders/import-excel")
 async def api_import_orders_excel(file: UploadFile = File(...)):
     """
-    Importador de Excel de pedidos (formato 'Pedidos Delivery.xlsx').
-    - Repara lo que puede
-    - Si un producto está roto → se ignora
-    - El pedido siempre se crea si tiene nombre y email
+    Importa pedidos desde Excel, ignorando la columna Productos.
+    Todos los pedidos tendrán un único producto:
+    - codigo = "GENÉRICO"
+    - nombre = "Producto Genérico"
+    - cantidad = 1
+    - precio_unitario = total (subtotal + envio)
     """
 
     if not file.filename.lower().endswith((".xlsx", ".xls")):
@@ -557,66 +511,74 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
 
     importados = 0
     errores = 0
-    resultados = []
+    detalles = []
+
+    def parse_money(v):
+        if v == "" or v is None:
+            return 0
+        return float(str(v).replace(".", "").replace(",", "."))
 
     with get_session() as session:
+
         for idx, row in df.iterrows():
             try:
-                productos = parse_productos_celda(str(row.get("Productos", "")))
+                nombre = row.get("Nombre", "").strip()
+                correo = row.get("Email", "").strip()
 
-                # Convertir precios
-                def parse_money(v):
-                    if v == "" or v is None:
-                        return 0
-                    return float(str(v).replace(".", "").replace(",", "."))
-
-                pedido_data = {
-                    "hora_envio": row.get("Hora de envio"),
-                    "nombre_completo": row.get("Nombre", "").strip(),
-                    "correo": row.get("Email", "").strip(),
-                    "telefono": str(row.get("Telefono", "")),
-                    "direccion": row.get("Direccion", ""),
-                    "comentario": row.get("Comentario", ""),
-                    "subtotal": parse_money(row.get("Subtotal")),
-                    "envio_cobrado": parse_money(row.get("Envio")),
-                    "total": parse_money(row.get("total")),
-                    "dia_entrega": row.get("dia de entrega") if row.get("dia de entrega") else None,
-                    "confirmado": str(row.get("confirmado y pagado", "")).upper() == "TRUE",
-                    "costo_envio_real": parse_money(row.get("COSTO ENVIO")),
-                    "entregado": str(row.get("entregado", "")).upper() == "TRUE",
-                    "productos": productos,
-                }
-
-                if not pedido_data["nombre_completo"] or not pedido_data["correo"]:
+                if not nombre or not correo:
                     errores += 1
-                    resultados.append({"fila": idx + 1, "error": "Falta nombre o email"})
+                    detalles.append({"fila": idx+1, "error": "Falta nombre o email"})
                     continue
 
-                # Crear pedido
+                subtotal = parse_money(row.get("Subtotal"))
+                envio = parse_money(row.get("Envio"))
+                total = parse_money(row.get("total"))
+
+                # fallback: si no viene total, lo calculo
+                if total == 0:
+                    total = subtotal + envio
+
                 order = Order(
-                    dia_entrega=pedido_data["dia_entrega"],
-                    nombre_completo=pedido_data["nombre_completo"],
-                    correo=pedido_data["correo"],
-                    telefono=pedido_data["telefono"],
-                    direccion=pedido_data["direccion"],
-                    comentario=pedido_data["comentario"],
-                    envio_cobrado=pedido_data["envio_cobrado"],
-                    costo_envio_real=pedido_data["costo_envio_real"],
-                    confirmado=pedido_data["confirmado"],
-                    entregado=pedido_data["entregado"],
+                    dia_entrega=row.get("dia de entrega") if row.get("dia de entrega") else None,
+                    nombre_completo=nombre,
+                    correo=correo,
+                    telefono=str(row.get("Telefono", "")),
+                    direccion=row.get("Direccion", ""),
+                    comentario=row.get("Comentario", ""),
+
+                    envio_cobrado=envio,
+                    costo_envio_real=parse_money(row.get("COSTO ENVIO")),
+
+                    confirmado=str(row.get("confirmado y pagado", "")).upper() == "TRUE",
+                    entregado=str(row.get("entregado", "")).upper() == "TRUE",
                 )
-                new_order = create_order(session, order, pedido_data["productos"])
+
+                # Crear pedido
+                new_order = create_order(session, order, [])
+
+                # Insertar producto genérico
+                gen = OrderProduct(
+                    order_id=new_order.id,
+                    product_id=None,
+                    codigo="GENÉRICO",
+                    nombre="Producto Genérico",
+                    cantidad=1,
+                    precio_unitario=total
+                )
+
+                session.add(gen)
+                session.commit()
 
                 importados += 1
-                resultados.append({"fila": idx + 1, "ok": True})
+                detalles.append({"fila": idx+1, "ok": True})
 
             except Exception as e:
                 errores += 1
-                resultados.append({"fila": idx + 1, "error": str(e)})
+                detalles.append({"fila": idx+1, "error": str(e)})
 
     return {
         "ok": True,
         "importados": importados,
         "errores": errores,
-        "detalles": resultados
+        "detalles": detalles
     }

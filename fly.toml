@@ -12,6 +12,7 @@ primary_region = 'gru'
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
+  hostname = "api.plutarcoalmacen.com.ar"
 
 [[vm]]
   memory = '1gb'

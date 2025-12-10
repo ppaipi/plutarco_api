@@ -1,4 +1,4 @@
-// pedidos.js - gestión de pedidos avanzada
+// pedidos.js - versión mejorada con typeahead y delete
 const ordersBox = document.getElementById("orders");
 const search = document.getElementById("search");
 const filterStatus = document.getElementById("filter-status");
@@ -13,6 +13,7 @@ const modal = document.getElementById("modal-order");
 const modalTitle = document.getElementById("modal-title");
 const modalSave = document.getElementById("modal-save");
 const modalCancel = document.getElementById("modal-cancel");
+const btnDeleteOrder = document.getElementById("btn-delete-order");
 
 // order fields
 const fNombre = document.getElementById("o-nombre");
@@ -26,11 +27,12 @@ const fConfirmado = document.getElementById("o-confirmado");
 const fEntregado = document.getElementById("o-entregado");
 
 const productSearch = document.getElementById("product-search");
+const typeaheadList = document.getElementById("typeahead-list");
 const itemsTableBody = document.querySelector("#items-table tbody");
 const calcSubtotal = document.getElementById("calc-subtotal");
 const btnAddTemp = document.getElementById("btn-add-temp");
 
-// theme toggle reuse
+// theme toggle reuse (if exists)
 const btnTheme = document.getElementById("theme-toggle");
 const saved = localStorage.getItem("theme");
 if (saved === "dark") {
@@ -48,9 +50,15 @@ let orders = [];
 let page = 0;
 const PAGE_SIZE = 20;
 let editingOrderId = null;
-let items = []; // {id(optional), codigo, nombre, cantidad, precio_unitario}
+let items = []; // array of { id?, codigo, nombre, cantidad, precio_unitario }
+let typeaheadResults = [];
+let typeaheadActive = -1;
+let typeaheadOpen = false;
+let typeaheadTimer = null;
 
-// helper API
+function toast(msg) { alert(msg) } // reemplazable por prettier toast
+
+// ===================== API helper =====================
 async function api(path, method='GET', body=null, isForm=false){
   const headers = {};
   const token = localStorage.getItem('token');
@@ -59,7 +67,7 @@ async function api(path, method='GET', body=null, isForm=false){
   const opts = { method, headers };
   if(body) opts.body = isForm ? body : JSON.stringify(body);
   const res = await fetch(path, opts);
-  if(!res.ok) {
+  if(!res.ok){
     const txt = await res.text();
     throw new Error(txt || res.status);
   }
@@ -67,11 +75,12 @@ async function api(path, method='GET', body=null, isForm=false){
   return res.json();
 }
 
-// load orders
+// ===================== LOAD ORDERS =====================
 async function loadOrders(){
   try{
     const data = await api('/api/orders');
-    orders = data;
+    // ensure date fields are strings
+    orders = data.map(o => ({ ...o, dia_entrega: o.dia_entrega ? o.dia_entrega.toString().slice(0,10) : null }));
     render();
   }catch(e){
     console.error(e);
@@ -79,9 +88,10 @@ async function loadOrders(){
   }
 }
 
+// ===================== RENDER ORDERS =====================
 function render(){
   ordersBox.innerHTML = '';
-  const q = search.value.toLowerCase();
+  const q = (search.value || '').toLowerCase();
   const state = filterStatus.value;
   const date = filterDate.value;
 
@@ -106,28 +116,47 @@ function render(){
   for(const o of slice){
     const card = document.createElement('div');
     card.className = 'card';
-
+    const total = (o.envio_cobrado || 0) + 0;
     card.innerHTML = `
-      <h3>${escapeHtml(o.nombre_completo || '—')}</h3>
+      <h3 style="display:flex;gap:8px;align-items:center;justify-content:space-between">
+        <span>${escapeHtml(o.nombre_completo || '—')}</span>
+        <span style="font-size:13px;color:var(--muted)">#${o.id}</span>
+      </h3>
       <p class="small">${escapeHtml(o.correo || '')}</p>
       <p class="small">${escapeHtml(o.telefono || '')} • ${escapeHtml(o.direccion || '')}</p>
       <p class="small">Entrega: <b>${o.dia_entrega || '-'}</b></p>
-      <p class="small">Total: $${(o.envio_cobrado||0)+0}</p>
+      <p class="small">Total: $${(o.envio_cobrado||0).toFixed ? (o.envio_cobrado||0).toFixed(2) : (o.envio_cobrado||0)}</p>
+
       <div class="row" style="margin-top:8px">
         <button class="btn small" data-id="${o.id}" data-action="edit">Ver / Editar</button>
         <button class="btn ghost small" data-id="${o.id}" data-action="print">Imprimir</button>
+        <button class="btn danger small" data-id="${o.id}" data-action="delete">Eliminar</button>
       </div>
     `;
-    const btnEdit = card.querySelector('button[data-action="edit"]');
-    btnEdit.onclick = ()=> openEdit(o);
+    // attach actions
+    card.querySelector('button[data-action="edit"]').onclick = ()=> openEdit(o);
+    card.querySelector('button[data-action="delete"]').onclick = ()=> confirmAndDelete(o.id);
     ordersBox.appendChild(card);
   }
 }
 
-// helpers
+// ===================== ESCAPE HTML =====================
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// Modal open for creating new order
+// ===================== DELETE ORDER =====================
+async function confirmAndDelete(orderId){
+  if(!confirm(`¿Eliminar pedido #${orderId}? Esta acción no se puede deshacer.`)) return;
+  try{
+    await api(`/api/orders/${orderId}`, 'DELETE');
+    toast('Pedido eliminado');
+    await loadOrders();
+  }catch(e){
+    console.error(e);
+    alert('Error eliminando pedido: ' + e.message);
+  }
+}
+
+// ===================== OPEN EDIT / CREATE =====================
 btnNewOrder.addEventListener('click', ()=>{
   editingOrderId = null;
   modalTitle.textContent = 'Crear pedido';
@@ -141,12 +170,12 @@ btnNewOrder.addEventListener('click', ()=>{
   fConfirmado.checked = false;
   fEntregado.checked = false;
   items = [];
+  btnDeleteOrder.style.display = 'none';
   renderItemsTable();
-  modal.style.display = 'flex';
+  openModalUI();
 });
 
-// open for editing
-function openEdit(order){
+async function openEdit(order){
   editingOrderId = order.id;
   modalTitle.textContent = `Editar pedido #${order.id}`;
   fNombre.value = order.nombre_completo || '';
@@ -158,33 +187,43 @@ function openEdit(order){
   fCostoEnvio.value = order.costo_envio_real || 0;
   fConfirmado.checked = !!order.confirmado;
   fEntregado.checked = !!order.entregado;
-  // obtener items asociados
-  (async ()=>{
-    try{
-      // el endpoint GET /api/orders/{id} devuelve order + productos
-      const r = await api(`/api/orders/${order.id}`);
-      // asumo r.productos es array de items con id, nombre, cantidad, precio_unitario, product_id, codigo
-      items = (r.productos || []).map(it => ({
-        id: it.id,
-        codigo: it.codigo || it.product_codigo || '',
-        nombre: it.nombre || it.product_name || '',
-        cantidad: it.cantidad || 1,
-        precio_unitario: it.precio_unitario || it.precio || 0
-      }));
-      renderItemsTable();
-      modal.style.display = 'flex';
-    }catch(e){ console.error(e); alert('Error cargando items'); }
-  })();
+  btnDeleteOrder.style.display = 'inline-block';
+
+  try{
+    const r = await api(`/api/orders/${order.id}`);
+    items = (r.productos || []).map(it => ({
+      id: it.id,
+      codigo: it.codigo || it.product_codigo || '',
+      nombre: it.nombre || it.product_name || '',
+      cantidad: it.cantidad || 1,
+      precio_unitario: Number(it.precio_unitario || it.precio || 0)
+    }));
+  }catch(e){
+    console.error(e);
+    items = [];
+  }
+  renderItemsTable();
+  openModalUI();
 }
 
-// render items
+function openModalUI(){
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden','false');
+  productSearch.focus();
+}
+function closeModalUI(){
+  modal.style.display = 'none';
+  modal.setAttribute('aria-hidden','true');
+}
+
+// ===================== ITEMS TABLE =====================
 function renderItemsTable(){
   itemsTableBody.innerHTML = '';
   let subtotal = 0;
   items.forEach((it, idx)=>{
-    const tr = document.createElement('tr');
     const subtotalItem = (Number(it.cantidad||0) * Number(it.precio_unitario||0));
     subtotal += subtotalItem;
+    const tr = document.createElement('tr');
     tr.innerHTML = `
       <td><input class="input" data-idx="${idx}" data-field="codigo" value="${escapeHtml(it.codigo||'')}"></td>
       <td><input class="input" data-idx="${idx}" data-field="nombre" value="${escapeHtml(it.nombre||'')}"></td>
@@ -197,21 +236,18 @@ function renderItemsTable(){
   });
   calcSubtotal.textContent = subtotal.toFixed(2);
 
-  // attach listeners to inputs & remove
+  // attach listeners
   itemsTableBody.querySelectorAll('input[data-field]').forEach(inp=>{
-    inp.onchange = (e)=>{
+    inp.onchange = ()=>{
       const idx = Number(inp.dataset.idx);
       const field = inp.dataset.field;
-      if(field === 'cantidad' || field === 'precio_unitario'){
-        items[idx][field] = Number(inp.value) || 0;
-      } else {
-        items[idx][field] = inp.value;
-      }
+      if(field === 'cantidad' || field === 'precio_unitario') items[idx][field] = Number(inp.value) || 0;
+      else items[idx][field] = inp.value;
       renderItemsTable();
     };
   });
   itemsTableBody.querySelectorAll('button[data-action="remove"]').forEach(btn=>{
-    btn.onclick = (e)=>{
+    btn.onclick = ()=>{
       const idx = Number(btn.dataset.idx);
       items.splice(idx,1);
       renderItemsTable();
@@ -221,69 +257,106 @@ function renderItemsTable(){
 
 // add temporary "varios" item
 btnAddTemp.addEventListener('click', ()=>{
-  const nombre = prompt('Nombre del artículo temporal (ej: Varios, Recargo, Donación):','Varios');
+  const nombre = prompt('Nombre del artículo temporal (ej: Varios, Recargo):','Varios');
   if(!nombre) return;
   items.push({ codigo: '', nombre: nombre, cantidad: 1, precio_unitario: 0 });
   renderItemsTable();
 });
 
-// product search suggestions (simple)
-let productSuggestTimer = null;
-productSearch.addEventListener('input', (e)=>{
-  clearTimeout(productSuggestTimer);
-  const q = productSearch.value.trim();
-  if(!q) return;
-  productSuggestTimer = setTimeout(async ()=>{
-    try{
-      // intentar un endpoint de búsqueda si existe: /api/products/search?q=...
-      // si no, traemos /api/products y filtramos
-      let res;
-      try{
-        res = await api(`/api/products?search=${encodeURIComponent(q)}`);
-      }catch(err){
-        const all = await api('/api/products');
-        res = all.filter(p => ((p.nombre||'') + ' ' + (p.codigo||'')).toLowerCase().includes(q.toLowerCase()));
-      }
-      // mostrar sugerencias simples
-      const list = res.slice(0,8);
-      const pick = list[0];
-      if(list.length===1 && pick){
-        // autoañadir el primer resultado
-        items.push({ codigo: pick.codigo||'', nombre: pick.nombre||'', cantidad:1, precio_unitario: pick.precio||pick.precio_unitario||0 });
-        productSearch.value = '';
-        renderItemsTable();
-      } else {
-        // mostrar un simple prompt con opciones
-        const names = list.map((p,i)=>`${i+1}) ${p.nombre} — ${p.codigo} — $${p.precio||p.precio_unitario||0}`).join('\n');
-        if(!names) return;
-        const ans = prompt(`Sugerencias:\n${names}\nElige el número para añadir, o cancelar:`);
-        const num = Number(ans);
-        if(num && list[num-1]){
-          const pick2 = list[num-1];
-          items.push({ codigo: pick2.codigo||'', nombre: pick2.nombre||'', cantidad:1, precio_unitario: pick2.precio||pick2.precio_unitario||0 });
-          productSearch.value = '';
-          renderItemsTable();
-        }
-      }
-    }catch(err){ console.error(err); }
-  }, 350);
+// ===================== TYPEAHEAD IMPLEMENTATION =====================
+productSearch.addEventListener('keydown', (e)=>{
+  const key = e.key;
+  if(!typeaheadOpen) return;
+  if(key === 'ArrowDown'){ e.preventDefault(); typeaheadActive = Math.min(typeaheadActive+1, typeaheadResults.length-1); renderTypeahead(); }
+  else if(key === 'ArrowUp'){ e.preventDefault(); typeaheadActive = Math.max(typeaheadActive-1, 0); renderTypeahead(); }
+  else if(key === 'Enter'){ e.preventDefault(); if(typeaheadActive >= 0) selectTypeahead(typeaheadActive); }
+  else if(key === 'Escape'){ closeTypeahead(); }
 });
 
-// IMPORT EXCEL
+productSearch.addEventListener('input', ()=>{
+  const q = productSearch.value.trim();
+  if(typeaheadTimer) clearTimeout(typeaheadTimer);
+  if(q.length === 0){ closeTypeahead(); return; }
+  typeaheadTimer = setTimeout(async ()=>{
+    try{
+      // prefer server search endpoint
+      const res = await api(`/api/products/search?q=${encodeURIComponent(q)}&limit=12`);
+      typeaheadResults = res.map(p=>({
+        codigo: p.codigo || '',
+        nombre: p.nombre || '',
+        precio: (p.precio || p.precio_unitario || 0)
+      }));
+      typeaheadActive = 0;
+      openTypeahead();
+    }catch(err){
+      console.error('typeahead err', err);
+      typeaheadResults = [];
+      closeTypeahead();
+    }
+  }, 220);
+});
+
+function openTypeahead(){
+  if(!typeaheadResults || typeaheadResults.length === 0){ closeTypeahead(); return; }
+  typeaheadList.innerHTML = '';
+  typeaheadResults.forEach((r, i)=>{
+    const div = document.createElement('div');
+    div.className = 'typeahead-item' + (i===typeaheadActive ? ' active' : '');
+    div.dataset.index = i;
+    div.innerHTML = `<div><strong>${escapeHtml(r.nombre)}</strong><div class="meta">${escapeHtml(r.codigo)}</div></div><div class="meta">$${Number(r.precio||0).toFixed(2)}</div>`;
+    div.onclick = ()=> selectTypeahead(i);
+    typeaheadList.appendChild(div);
+  });
+  typeaheadList.style.display = 'block';
+  typeaheadOpen = true;
+}
+
+function renderTypeahead(){
+  Array.from(typeaheadList.children).forEach((ch, idx)=> {
+    ch.classList.toggle('active', idx === typeaheadActive);
+    if(idx === typeaheadActive){
+      // ensure visible
+      ch.scrollIntoView({block:'nearest'});
+    }
+  });
+}
+
+function closeTypeahead(){
+  typeaheadList.style.display = 'none';
+  typeaheadOpen = false;
+  typeaheadResults = [];
+  typeaheadActive = -1;
+}
+
+function selectTypeahead(idx){
+  const p = typeaheadResults[idx];
+  if(!p) return;
+  items.push({ codigo: p.codigo, nombre: p.nombre, cantidad: 1, precio_unitario: Number(p.precio||0) });
+  renderItemsTable();
+  productSearch.value = '';
+  closeTypeahead();
+}
+
+// click outside to close typeahead
+document.addEventListener('click', (e)=>{
+  if(!productSearch.contains(e.target) && !typeaheadList.contains(e.target)) closeTypeahead();
+});
+
+// ===================== IMPORT EXCEL =====================
 btnImportExcel.addEventListener('click', ()=> fileExcel.click());
 fileExcel.addEventListener('change', async (e)=>{
   const f = e.target.files[0]; if(!f) return;
   const fd = new FormData(); fd.append('file', f);
   try{
     const r = await api('/api/orders/import-excel', 'POST', fd, true);
-    alert(`Importados: ${r.created}. Errores: ${r.errors?.length||0}`);
+    toast(`Importados: ${r.created}. Errores: ${r.errors?.length||0}`);
+    if(r.errors && r.errors.length) console.warn('Errores import:', r.errors);
     await loadOrders();
-  }catch(err){ console.error(err); alert('Error importando Excel'); }
+  }catch(err){ console.error(err); alert('Error importando Excel: ' + (err.message||err)); }
 });
 
-// SAVE modal (create or update)
+// ===================== SAVE modal (create or update) =====================
 modalSave.addEventListener('click', async ()=>{
-  // construir payload pedido
   const payload = {
     nombre_completo: fNombre.value,
     correo: fCorreo.value,
@@ -298,15 +371,13 @@ modalSave.addEventListener('click', async ()=>{
 
   try{
     if(editingOrderId){
-      // Primero actualizar campos generales
       await api(`/api/orders/${editingOrderId}`, 'PUT', payload);
 
-      // Luego sincronizar items: simplificamos borrando y re-guardando, o usando endpoints items CRUD
-      // Aquí usamos endpoints items: si item has id -> update, else -> create; we also delete removed (best effort)
-      // Obtener items actuales del servidor:
-      const srv = await api(`/api/orders/${editingOrderId}`);
-      const srvItems = (srv.productos || []).map(i=>i.id);
-      // actualizar/crear
+      // sync items: update existing, create new, delete removed
+      const server = await api(`/api/orders/${editingOrderId}`);
+      const serverItemIds = (server.productos || []).map(i=>i.id);
+
+      // update/create
       for(const it of items){
         if(it.id){
           await api(`/api/orders/${editingOrderId}/items/${it.id}`, 'PUT', {
@@ -318,32 +389,29 @@ modalSave.addEventListener('click', async ()=>{
           });
         }
       }
-      // borrar los que fueron removidos: detectar ids en srv que ya no están en items
+      // delete removed
       const keptIds = items.filter(i=>i.id).map(i=>i.id);
-      const toDelete = (srv.productos || []).filter(si => !keptIds.includes(si.id));
+      const toDelete = (server.productos || []).filter(si => !keptIds.includes(si.id));
       for(const td of toDelete){
         await api(`/api/orders/${editingOrderId}/items/${td.id}`, 'DELETE');
       }
 
-      alert('Pedido actualizado');
+      toast('Pedido actualizado');
     } else {
-      // crear nuevo
-      // We first create order with empty products, then add items
-      const newOrder = await api('/api/orders', 'POST', {
-        ...payload,
-        productos: [] // create_order needs productos; we'll add them after
-      });
-      const newId = newOrder.order.id || newOrder.order; // depende de create_order response
-      // add items
+      // create order first
+      const newOrderResp = await api('/api/orders', 'POST', { ...payload, productos: [] });
+      const newOrderId = newOrderResp.order?.id || newOrderResp.order || newOrderResp.id || null;
+      if(!newOrderId) {
+        throw new Error('No se pudo obtener ID del nuevo pedido (revisá la respuesta del backend).');
+      }
       for(const it of items){
-        await api(`/api/orders/${newId}/items`, 'POST', {
+        await api(`/api/orders/${newOrderId}/items`, 'POST', {
           codigo: it.codigo, nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario
         });
       }
-      alert('Pedido creado');
+      toast('Pedido creado');
     }
-
-    modal.style.display = 'none';
+    closeModalUI();
     await loadOrders();
   }catch(e){
     console.error(e);
@@ -351,7 +419,20 @@ modalSave.addEventListener('click', async ()=>{
   }
 });
 
-modalCancel.addEventListener('click', ()=> modal.style.display = 'none');
+modalCancel.addEventListener('click', ()=> closeModalUI());
+btnDeleteOrder.addEventListener('click', async ()=>{
+  if(!editingOrderId) return;
+  if(!confirm(`Confirmar eliminación de pedido #${editingOrderId}?`)) return;
+  try{
+    await api(`/api/orders/${editingOrderId}`, 'DELETE');
+    toast('Pedido eliminado');
+    closeModalUI();
+    await loadOrders();
+  }catch(e){
+    console.error(e);
+    alert('Error eliminando pedido: ' + e.message);
+  }
+});
 
 // pagination & filters
 btnLoadMore.addEventListener('click', ()=> { page++; render(); });

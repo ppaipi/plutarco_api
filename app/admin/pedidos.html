@@ -22,20 +22,19 @@
 
   <section class="card controls">
     <div class="left">
-      <input id="search" placeholder="Buscar por nombre, mail o dirección…">
-      <select id="filter-status">
+      <input id="search" class="input" placeholder="Buscar por nombre, mail o dirección…">
+      <select id="filter-status" class="input">
         <option value="">Todos</option>
         <option value="pendiente">Pendientes</option>
         <option value="confirmado">Confirmados</option>
         <option value="entregado">Entregados</option>
       </select>
-      <input id="filter-date" type="date">
+      <input id="filter-date" class="input" type="date">
     </div>
 
     <div class="right">
       <input id="file-excel" type="file" accept=".xls,.xlsx" hidden>
       <button id="btn-import-excel" class="btn">Importar Excel</button>
-
       <button id="btn-new-order" class="btn primary">+ Nuevo Pedido</button>
     </div>
   </section>
@@ -50,10 +49,10 @@
 
 <!-- MODAL CREAR/EDITAR PEDIDO -->
 <div id="modal-order" class="modal" aria-hidden="true">
-  <div class="modal-card">
+  <div class="modal-card" role="dialog" aria-modal="true" aria-label="Editar pedido">
     <h3 id="modal-title">Pedido</h3>
 
-    <div class="form-grid">
+    <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
       <label>Nombre<br><input id="o-nombre" class="input"></label>
       <label>Email<br><input id="o-correo" class="input"></label>
       <label>Teléfono<br><input id="o-telefono" class="input"></label>
@@ -61,15 +60,20 @@
       <label>Día entrega<br><input id="o-dia" type="date" class="input"></label>
       <label>Envio cobrado<br><input id="o-envio" type="number" class="input"></label>
       <label>Costo envío real<br><input id="o-costo-envio" type="number" class="input"></label>
-      <label>Confirmado <input id="o-confirmado" type="checkbox"></label>
-      <label>Entregado <input id="o-entregado" type="checkbox"></label>
+      <div style="display:flex;align-items:center;gap:12px;">
+        <label>Confirmado <input id="o-confirmado" type="checkbox"></label>
+        <label>Entregado <input id="o-entregado" type="checkbox"></label>
+      </div>
     </div>
 
-    <h4>Artículos</h4>
+    <h4 style="margin-top:12px">Artículos</h4>
     <div class="card">
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-        <input id="product-search" class="input" placeholder="Buscar producto por nombre o código...">
-        <button id="btn-add-temp" class="btn small">+ Varios (temporal)</button>
+        <div class="typeahead" style="flex:1;position:relative">
+          <input id="product-search" class="input" placeholder="Buscar producto por nombre o código... (typeahead)">
+          <div id="typeahead-list" class="typeahead-list" style="display:none"></div>
+        </div>
+        <button id="btn-add-temp" class="btn small">+ Varios</button>
       </div>
 
       <table id="items-table" style="width:100%;border-collapse:collapse">
@@ -87,6 +91,7 @@
     </div>
 
     <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
+      <button id="btn-delete-order" class="btn danger small" style="margin-right:auto;display:none">Eliminar pedido</button>
       <button id="modal-save" class="btn primary">Guardar</button>
       <button id="modal-cancel" class="btn ghost">Cancelar</button>
     </div>

@@ -423,3 +423,59 @@ input[type=checkbox]{
     grid-template-columns:1fr;
   }
 }
+/* ---------- Typeahead dropdown ---------- */
+.typeahead {
+  position: relative;
+}
+.typeahead-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: 260px;
+  overflow:auto;
+  background:var(--card);
+  border:1px solid var(--input-border);
+  border-radius:10px;
+  box-shadow:0 10px 30px rgba(2,6,23,0.12);
+  z-index: 120;
+  padding:6px;
+}
+.typeahead-item {
+  padding:8px 10px;
+  border-radius:8px;
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  cursor:pointer;
+  transition:background .12s;
+  align-items:center;
+}
+.typeahead-item:hover, .typeahead-item.active {
+  background: rgba(11,118,255,0.06);
+}
+.typeahead-item .meta { color:var(--muted); font-size:13px; }
+
+/* ---------- Delete order button ---------- */
+.btn.danger {
+  background: linear-gradient(90deg,var(--danger),#ff7b7b);
+  color: #fff;
+  border: none;
+}
+.btn.danger.small { padding:6px 9px; }
+
+/* ---------- Items table improvements ---------- */
+#items-table td input.input {
+  padding:6px 8px;
+  font-size:14px;
+}
+#items-table td { vertical-align: middle; padding:6px 8px; }
+
+/* ---------- Tiny helpers ---------- */
+.kv { font-weight:700; color:var(--muted); font-size:13px; }
+.helper-line { font-size:13px; color:var(--muted); margin-top:6px; }
+
+/* smooth theme transitions (already suggested) */
+html, body, .card, .product-card, .modal-card, .typeahead-list {
+  transition: background-color .20s ease, color .20s ease, border-color .20s ease, box-shadow .20s ease;
+}

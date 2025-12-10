@@ -26,6 +26,63 @@ import os
 import re
 from decimal import Decimal
 
+import re
+
+def parse_productos_celda(celda: str):
+    """
+    Parsea una celda de productos en formato A o B.
+    Devuelve lista de:
+    {codigo, nombre, cantidad, precio_unitario}
+    """
+    if not celda or not celda.strip():
+        return []
+
+    productos = []
+    partes = [p.strip() for p in celda.split(",") if p.strip()]
+
+    for parte in partes:
+        # ----- Formato B -----
+        # COD|Nombre|Cantidad|Precio
+        if "|" in parte:
+            cols = [c.strip() for c in parte.split("|")]
+            if len(cols) == 4:
+                codigo, nombre, cant, precio = cols
+                try:
+                    productos.append({
+                        "codigo": codigo,
+                        "nombre": nombre,
+                        "cantidad": int(cant),
+                        "precio_unitario": float(str(precio).replace(".", "").replace(",", ".")),
+                    })
+                    continue
+                except:
+                    pass  # intentar formato A
+
+        # ----- Formato A -----
+        # "Pan x1 ($2600)"
+        match = re.match(r"(.+?)\s*x\s*(\d+)\s*\(\s*\$?\s*([\d\.,]+)\s*\)", parte)
+        if match:
+            nombre = match.group(1).strip()
+            cantidad = int(match.group(2))
+            precio_raw = match.group(3)
+
+            try:
+                precio = float(precio_raw.replace(".", "").replace(",", "."))
+                productos.append({
+                    "codigo": None,
+                    "nombre": nombre,
+                    "cantidad": cantidad,
+                    "precio_unitario": precio,
+                })
+                continue
+            except:
+                pass
+
+        print("Producto inválido ignorado:", parte)
+
+    return productos
+
+
 # -------------------------
 # Cargar variables de entorno
 # -------------------------
@@ -393,191 +450,7 @@ def api_get_no_image():
             (Product.imagen_url == None) | (Product.imagen_url == "")
         ).order_by(Product.orden.asc())
         return session.exec(stmt).all()
-def parse_products_cell(cell_value: str):
-    """
-    Devuelve lista de dicts: [{"codigo":..., "nombre":..., "cantidad":int, "precio_unitario": float or None}, ...]
-    Maneja:
-     - Formato legible: "Sal marina ... x1 ($2600), Nueces ... x1 ($2500), ..."
-     - Formato pipe: "PLUT0006|Pan ...|1|5900, 724751092861|Maple ...|1|15800, ..."
-    """
-    if not cell_value:
-        return []
 
-    s = str(cell_value).strip()
-
-    items = []
-
-    # Primero: detectar si hay '|' indicando formato pipe
-    if '|' in s and re.search(r'\|', s):
-        # separar por comas que tienen formato: COD|NOMBRE|CANT|PRECIO
-        parts = [p.strip() for p in s.split(',') if p.strip()]
-        for part in parts:
-            pieces = [x.strip() for x in part.split('|') if x.strip()!='']
-            # Esperamos al menos 3 piezas: codigo, nombre, cantidad (precio opcional)
-            if len(pieces) >= 3:
-                codigo = pieces[0]
-                nombre = pieces[1]
-                try:
-                    cantidad = int(re.sub(r'\D', '', pieces[2])) if str(pieces[2]).strip() else 1
-                except:
-                    cantidad = 1
-                precio = None
-                if len(pieces) >= 4:
-                    # normalizar precio: puede venir "5900" o "5.900,00"
-                    precio_raw = pieces[3].replace('.', '').replace('$', '').replace(' ', '').replace(',', '.')
-                    try:
-                        precio = float(re.sub(r'[^\d\.]', '', precio_raw)) if precio_raw else None
-                    except:
-                        precio = None
-                items.append({"codigo": codigo, "nombre": nombre, "cantidad": cantidad, "precio_unitario": precio})
-            else:
-                # si no tiene codigo, intentar parsear nombre xcantidad (fallback)
-                m = re.search(r'(.+?)\s+x\s*(\d+)', part, re.IGNORECASE)
-                if m:
-                    nombre = m.group(1).strip()
-                    cantidad = int(m.group(2))
-                    items.append({"codigo": None, "nombre": nombre, "cantidad": cantidad, "precio_unitario": None})
-        return items
-
-    # Si no hay pipes, asumir formato humano: "Nombre x2 ($11600)"
-    # Separamos por comas principales (coma que delimita productos)
-    # Hay casos donde la coma aparece en el nombre; asumimos que cada item tiene " xN " o "($...)".
-    # RegEx para capturar "NOMBRE xN ($PRECIO)" o "NOMBRE xN" o "NOMBRE ($PRECIO)"
-    parts = [p.strip() for p in re.split(r',\s*(?![^()]*\))', s) if p.strip()]
-    for part in parts:
-        # buscar cantidad: " xN" o " x N"
-        cantidad = 1
-        m_q = re.search(r'x\s*(\d+)', part, re.IGNORECASE)
-        if m_q:
-            try:
-                cantidad = int(m_q.group(1))
-            except:
-                cantidad = 1
-
-        # buscar precio entre paréntesis: ($123) o $12.300,00
-        precio = None
-        m_price = re.search(r'\(?\$?\s*([0-9\.\,]+)\)?', part)
-        if m_price:
-            raw = m_price.group(1)
-            # limpiar: "22.300,00" -> "22300.00"
-            raw2 = raw.replace('.', '').replace(',', '.')
-            try:
-                precio = float(re.sub(r'[^\d\.]', '', raw2))
-            except:
-                precio = None
-
-        # el nombre es el texto sin la parte "xN" ni "(...$...)" ni precio
-        nombre = re.sub(r'\(?\$?[0-9\.\,\s]*\)?', '', part).strip()
-        nombre = re.sub(r'x\s*\d+', '', nombre, flags=re.IGNORECASE).strip()
-        # si queda coma o guion
-        nombre = nombre.strip(' ,.-')
-
-        items.append({"codigo": None, "nombre": nombre if nombre else None, "cantidad": cantidad, "precio_unitario": precio})
-
-    return items
-
-# ---------------------------------------------------------
-# Endpoint: importar excel de pedidos
-# ---------------------------------------------------------
-@app.post("/api/orders/import-excel")
-async def import_orders_excel(file: UploadFile = File(...)):
-    """
-    Importa un excel (xlsx/xls) con columnas:
-    Hora de envio, Nombre, Email, Telefono, Direccion, Comentario, Productos, Subtotal, Envio, total, dia de entrega, confirmado y pagado, COSTO ENVIO, entregado
-    """
-    if not file.filename.lower().endswith((".xlsx", ".xls")):
-        raise HTTPException(status_code=400, detail="Archivo debe ser .xlsx o .xls")
-
-    content = await file.read()
-    # usando pandas (ya lo tenés importado) — es robusto para distintos formatos
-    try:
-        import pandas as pd
-        df = pd.read_excel(io.BytesIO(content), engine="openpyxl")
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error leyendo Excel: {e}")
-
-    created = 0
-    updated = 0
-    errors = []
-
-    with get_session() as session:
-        for idx, row in df.iterrows():
-            try:
-                nombre = str(row.get("Nombre", "")).strip()
-                correo = str(row.get("Email", "")).strip()
-                telefono = str(row.get("Telefono", "")).strip()
-                direccion = str(row.get("Direccion", "")).strip()
-                comentario = str(row.get("Comentario", "")).strip()
-
-                productos_raw = row.get("Productos", "")
-                productos_parsed = parse_products_cell(productos_raw)
-
-                # subtotal/envio/total
-                def parse_money(v):
-                    if v is None: return 0.0
-                    s = str(v)
-                    s = s.replace('$','').replace('.','').replace(',','.')
-                    try:
-                        return float(re.sub(r'[^\d\.]', '', s))
-                    except:
-                        return 0.0
-
-                envio_cobrado = parse_money(row.get("Envio", 0))
-                subtotal = parse_money(row.get("Subtotal", 0))
-                total = parse_money(row.get("total", 0))
-                costo_envio_real = parse_money(row.get("COSTO ENVIO", row.get("COSTO ENVIO", 0)))
-
-                # dia de entrega: intentar parsear fecha
-                dia_entrega = None
-                if row.get("dia de entrega"):
-                    try:
-                        dia_entrega = pd.to_datetime(row.get("dia de entrega")).date()
-                    except:
-                        try:
-                            dia_entrega = datetime.fromisoformat(str(row.get("dia de entrega"))).date()
-                        except:
-                            dia_entrega = None
-
-                confirmado = False
-                ccol = str(row.get("confirmado y pagado", "")).strip().upper()
-                if ccol in ("TRUE","1","SI","SÍ","YES","Y"): confirmado = True
-
-                entregado = False
-                ecol = str(row.get("entregado", "")).strip().upper()
-                if ecol in ("TRUE","1","SI","SÍ","YES","Y"): entregado = True
-
-                # construir objeto Order (usa tu modelo Order)
-                order = Order(
-                    dia_entrega = dia_entrega,
-                    nombre_completo = nombre,
-                    correo = correo,
-                    telefono = telefono,
-                    direccion = direccion,
-                    comentario = comentario,
-                    envio_cobrado = float(envio_cobrado),
-                    costo_envio_real = float(costo_envio_real),
-                    confirmado = confirmado,
-                    entregado = entregado
-                )
-
-                # convertir productos_parsed a la forma que create_order espera
-                productos_payload = []
-                for it in productos_parsed:
-                    productos_payload.append({
-                        "codigo": it.get("codigo") or "",
-                        "nombre": it.get("nombre") or "",
-                        "cantidad": int(it.get("cantidad", 1)),
-                        "precio_unitario": float(it.get("precio_unitario") or 0.0)
-                    })
-
-                new_order = create_order(session, order, productos_payload)
-                created += 1
-            except Exception as e:
-                errors.append({"row": int(idx)+2, "error": str(e)})
-                continue
-
-    return {"ok": True, "created": created, "errors": errors}
-# Agregar /api/orders/{order_id}/items para CRUD de items
 
 @app.post("/api/orders/{order_id}/items")
 def add_order_item(order_id: int, payload: dict):
@@ -634,3 +507,116 @@ def delete_order_item(order_id: int, item_id: int):
         session.delete(op)
         session.commit()
         return {"ok": True}
+# -------------------------
+# BORRAR PEDIDO
+# -------------------------
+@app.delete("/api/orders/{order_id}")
+def api_delete_order(order_id: int):
+    with get_session() as session:
+        order = session.get(Order, order_id)
+        if not order:
+            raise HTTPException(status_code=404, detail="Pedido no encontrado")
+        # Borrar orderproducts asociados (si no hay cascade)
+        session.exec(select(OrderProduct).where(OrderProduct.order_id == order_id)).all()
+        # Si tu modelo tiene cascade, basta session.delete(order)
+        for op in session.exec(select(OrderProduct).where(OrderProduct.order_id == order_id)).all():
+            session.delete(op)
+        session.delete(order)
+        session.commit()
+        return {"ok": True, "deleted": order_id}
+
+# -------------------------
+# BUSCADOR DE PRODUCTOS (TYPEAHEAD)
+# -------------------------
+@app.get("/api/products/search", response_model=List[Product])
+def api_products_search(q: Optional[str] = None, limit: int = 20):
+    with get_session() as session:
+        if not q or q.strip() == "":
+            stmt = select(Product).order_by(Product.nombre).limit(limit)
+            return session.exec(stmt).all()
+        term = f"%{q.lower().strip()}%"
+        # SQLModel / SQLAlchemy: buscar por nombre o codigo (case-insensitive)
+        stmt = select(Product).where(
+            (Product.nombre.ilike(term)) | (Product.codigo.ilike(term))
+        ).order_by(Product.orden.asc()).limit(limit)
+        return session.exec(stmt).all()
+@app.post("/api/orders/import-excel")
+async def api_import_orders_excel(file: UploadFile = File(...)):
+    """
+    Importador de Excel de pedidos (formato 'Pedidos Delivery.xlsx').
+    - Repara lo que puede
+    - Si un producto está roto → se ignora
+    - El pedido siempre se crea si tiene nombre y email
+    """
+
+    if not file.filename.lower().endswith((".xlsx", ".xls")):
+        raise HTTPException(400, "Debe ser un archivo Excel (.xlsx o .xls)")
+
+    content = await file.read()
+    df = pd.read_excel(io.BytesIO(content)).fillna("")
+
+    importados = 0
+    errores = 0
+    resultados = []
+
+    with get_session() as session:
+        for idx, row in df.iterrows():
+            try:
+                productos = parse_productos_celda(str(row.get("Productos", "")))
+
+                # Convertir precios
+                def parse_money(v):
+                    if v == "" or v is None:
+                        return 0
+                    return float(str(v).replace(".", "").replace(",", "."))
+
+                pedido_data = {
+                    "hora_envio": row.get("Hora de envio"),
+                    "nombre_completo": row.get("Nombre", "").strip(),
+                    "correo": row.get("Email", "").strip(),
+                    "telefono": str(row.get("Telefono", "")),
+                    "direccion": row.get("Direccion", ""),
+                    "comentario": row.get("Comentario", ""),
+                    "subtotal": parse_money(row.get("Subtotal")),
+                    "envio_cobrado": parse_money(row.get("Envio")),
+                    "total": parse_money(row.get("total")),
+                    "dia_entrega": row.get("dia de entrega") if row.get("dia de entrega") else None,
+                    "confirmado": str(row.get("confirmado y pagado", "")).upper() == "TRUE",
+                    "costo_envio_real": parse_money(row.get("COSTO ENVIO")),
+                    "entregado": str(row.get("entregado", "")).upper() == "TRUE",
+                    "productos": productos,
+                }
+
+                if not pedido_data["nombre_completo"] or not pedido_data["correo"]:
+                    errores += 1
+                    resultados.append({"fila": idx + 1, "error": "Falta nombre o email"})
+                    continue
+
+                # Crear pedido
+                order = Order(
+                    dia_entrega=pedido_data["dia_entrega"],
+                    nombre_completo=pedido_data["nombre_completo"],
+                    correo=pedido_data["correo"],
+                    telefono=pedido_data["telefono"],
+                    direccion=pedido_data["direccion"],
+                    comentario=pedido_data["comentario"],
+                    envio_cobrado=pedido_data["envio_cobrado"],
+                    costo_envio_real=pedido_data["costo_envio_real"],
+                    confirmado=pedido_data["confirmado"],
+                    entregado=pedido_data["entregado"],
+                )
+                new_order = create_order(session, order, pedido_data["productos"])
+
+                importados += 1
+                resultados.append({"fila": idx + 1, "ok": True})
+
+            except Exception as e:
+                errores += 1
+                resultados.append({"fila": idx + 1, "error": str(e)})
+
+    return {
+        "ok": True,
+        "importados": importados,
+        "errores": errores,
+        "detalles": resultados
+    }

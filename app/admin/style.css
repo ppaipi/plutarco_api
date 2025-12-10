@@ -141,7 +141,7 @@ select{
 input{
     width:100%;
     box-sizing:border-box;
-    border-radius: 10px;
+    border-radius: var(--radius);
 }
 input:focus,
 select:focus{
@@ -478,4 +478,199 @@ input[type=checkbox]{
 /* smooth theme transitions (already suggested) */
 html, body, .card, .product-card, .modal-card, .typeahead-list {
   transition: background-color .20s ease, color .20s ease, border-color .20s ease, box-shadow .20s ease;
+}
+/* === ORDER CARDS === */
+
+.order-card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: 0 8px 28px rgba(12, 20, 40, 0.06);
+  margin-bottom: 14px;
+  border: 1px solid var(--input-border);
+}
+
+.order-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.order-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--accent);
+}
+
+.order-info {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  line-height: 1.4;
+}
+
+.order-items {
+  border-top: 1px solid var(--input-border);
+  padding-top: 10px;
+  margin-top: 10px;
+}
+
+.order-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--input-border);
+}
+
+.order-item:last-child {
+  border-bottom: none;
+}
+
+.order-item strong {
+  color: var(--accent);
+}
+
+.order-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+}
+
+.order-delete-btn {
+  background: var(--danger);
+  color: white;
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  border: none;
+}
+
+.order-delete-btn:hover {
+  opacity: 0.9;
+}
+.order-buttons {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
+}
+
+.order-buttons button {
+  background: var(--bg);
+  border: none;
+  color: var(--primary);
+  padding: 4px 8px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.order-buttons button:hover {
+  opacity: .85;
+}
+/* ======== PEDIDOS - MODAL ======== */
+
+.modal-card {
+  max-width: 900px;
+  width: 95%;
+  background: var(--card);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.modal-card h3 {
+  margin: 0 0 8px;
+}
+
+/* GRID GENERAL */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.form-grid label {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+#items-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 10px;
+}
+
+#items-table thead {
+  background: var(--bg2);
+}
+
+#items-table th,
+#items-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+}
+
+#items-table input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#typeahead-list {
+  position: absolute;
+  background: var(--card);
+  z-index: 20;
+  width: 100%;
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.typeahead-item {
+  padding: 8px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.typeahead-item:hover,
+.typeahead-item.active {
+  background: var(--hover);
+}
+
+/* ======== CARDS DEL LISTADO ======== */
+
+#orders .card {
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--card);
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-light);
+}
+
+#orders .card h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+#orders .card p {
+  margin: 2px 0;
+}
+
+#orders .row {
+  display: flex;
+  gap: 8px;
+}
+
+/* Botones más compactos */
+#orders .btn.small {
+  padding: 4px 10px;
+  font-size: 13px;
 }

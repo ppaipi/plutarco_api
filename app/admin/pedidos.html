@@ -7,31 +7,51 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
 <div id="app">
 
 <header class="topbar">
   <div class="brand">Plutarco <span class="muted">— Pedidos</span></div>
   <div class="actions">
     <button id="theme-toggle" class="btn small ghost">🌙</button>
-    <a href="/admin" class="btn small">Productos</a>
-    <button id="btn-logout" class="btn ghost" hidden>Salir</button>
+    <a href="/productos" class="btn small">Productos</a>
+    <button id="btn-logout" class="btn ghost">Salir</button>
   </div>
 </header>
 
 <main class="container">
 
+
   <section class="card controls">
-    <div class="left">
+    <div class="left" style="display:flex;flex-wrap:wrap;gap:10px">
+
       <input id="search" class="input" placeholder="Buscar por nombre, mail o dirección…">
+
+      <!-- FILTRO STATUS -->
       <select id="filter-status" class="input">
         <option value="">Todos</option>
         <option value="pendiente">Pendientes</option>
         <option value="confirmado">Confirmados</option>
         <option value="entregado">Entregados</option>
       </select>
-      <input id="filter-date" class="input" type="date">
+
+      <!-- FILTRO POR DÍA EXACTO -->
+      <input id="filter-date" type="date" class="input">
+
+      <!-- FILTRO POR MES -->
+      <select id="filter-month" class="input">
+        <option value="">Mes</option>
+      </select>
+
+      <!-- ORDEN -->
+      <select id="filter-sort" class="input">
+        <option value="desc">Más nuevos primero</option>
+        <option value="asc">Más antiguos primero</option>
+      </select>
+
     </div>
 
+    <!-- BOTONES -->
     <div class="right">
       <input id="file-excel" type="file" accept=".xls,.xlsx" hidden>
       <button id="btn-import-excel" class="btn">Importar Excel</button>
@@ -39,38 +59,48 @@
     </div>
   </section>
 
-  <section id="orders" class="grid"></section>
+  <!-- ======================= -->
+  <!-- LISTA DE PEDIDOS -->
+  <!-- ======================= -->
+  <section id="list"></section>
 
-  <div class="card pager">
+  <div class="card pager" style="text-align:center;margin-top:8px">
     <button id="btn-load-more" class="btn ghost">Cargar más</button>
   </div>
 
 </main>
 
-<!-- MODAL CREAR/EDITAR PEDIDO -->
+
+<!-- ======================= -->
+<!-- MODAL PARA PEDIDO -->
+<!-- ======================= -->
 <div id="modal-order" class="modal" aria-hidden="true">
-  <div class="modal-card" role="dialog" aria-modal="true" aria-label="Editar pedido">
+
+  <div class="modal-card" role="dialog" aria-modal="true">
+
     <h3 id="modal-title">Pedido</h3>
 
-    <div class="form-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+    <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;">
       <label>Nombre<br><input id="o-nombre" class="input"></label>
       <label>Email<br><input id="o-correo" class="input"></label>
       <label>Teléfono<br><input id="o-telefono" class="input"></label>
       <label>Dirección<br><input id="o-direccion" class="input"></label>
       <label>Día entrega<br><input id="o-dia" type="date" class="input"></label>
-      <label>Envio cobrado<br><input id="o-envio" type="number" class="input"></label>
+      <label>Envío cobrado<br><input id="o-envio" type="number" class="input"></label>
       <label>Costo envío real<br><input id="o-costo-envio" type="number" class="input"></label>
-      <div style="display:flex;align-items:center;gap:12px;">
-        <label>Confirmado <input id="o-confirmado" type="checkbox"></label>
-        <label>Entregado <input id="o-entregado" type="checkbox"></label>
+
+      <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
+        <label><input type="checkbox" id="o-confirmado"> Confirmado</label>
+        <label><input type="checkbox" id="o-entregado"> Entregado</label>
       </div>
     </div>
 
-    <h4 style="margin-top:12px">Artículos</h4>
+    <h4 style="margin-top:20px">Artículos</h4>
     <div class="card">
+
       <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
         <div class="typeahead" style="flex:1;position:relative">
-          <input id="product-search" class="input" placeholder="Buscar producto por nombre o código... (typeahead)">
+          <input id="product-search" class="input" placeholder="Buscar producto…">
           <div id="typeahead-list" class="typeahead-list" style="display:none"></div>
         </div>
         <button id="btn-add-temp" class="btn small">+ Varios</button>
@@ -78,9 +108,7 @@
 
       <table id="items-table" style="width:100%;border-collapse:collapse">
         <thead>
-          <tr style="text-align:left">
-            <th>Codigo</th><th>Nombre</th><th>Cant</th><th>Precio unit.</th><th>Subtotal</th><th></th>
-          </tr>
+          <tr><th>Código</th><th>Nombre</th><th>Cant</th><th>Precio unit.</th><th>Subtotal</th><th></th></tr>
         </thead>
         <tbody></tbody>
       </table>
@@ -90,15 +118,17 @@
       </div>
     </div>
 
-    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end">
-      <button id="btn-delete-order" class="btn danger small" style="margin-right:auto;display:none">Eliminar pedido</button>
+    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
+      <button id="btn-delete-order" class="btn danger small" style="margin-right:auto;display:none">Eliminar</button>
       <button id="modal-save" class="btn primary">Guardar</button>
       <button id="modal-cancel" class="btn ghost">Cancelar</button>
     </div>
+
   </div>
 </div>
 
 <script src="pedidos.js"></script>
+
 </div>
 </body>
 </html>

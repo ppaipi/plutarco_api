@@ -173,15 +173,16 @@ function renderFiltered(){
   statsEl.textContent = `Mostrando ${Math.min(visibleCount, list.length)} de ${list.length}`;
 }
 
-function renderList(list){
+function renderList(list) {
   listEl.innerHTML = '';
-  if(!list.length){ listEl.innerHTML = '<div class="no-results card">No hay productos</div>'; return; }
+  if (!list.length) {
+    listEl.innerHTML = '<div class="no-results card">No hay productos</div>';
+    return;
+  }
 
-  // build DOM and attach drag/drop attributes
   list.forEach((p, idx) => {
     const div = document.createElement('div');
     div.className = 'product-card';
-    div.draggable = true;
     div.dataset.codigo = p.codigo;
     div.dataset.id = p.id;
     div.dataset.index = idx;
@@ -189,112 +190,120 @@ function renderList(list){
     const imagen = p.imagen_url ? p.imagen_url : 'placeholder.jpg';
 
     div.innerHTML = `
-      <div class="thumb"><img src="${escapeHtml(imagen)}" alt="${escapeHtml(p.nombre)}" onerror="this.src='placeholder.jpg'"></div>
+      <div class="thumb">
+        <img src="${escapeHtml(imagen)}" alt="${escapeHtml(p.nombre)}"
+        onerror="this.src='placeholder.jpg'">
+      </div>
+
       <div class="meta">
         <h4 title="${escapeHtml(p.nombre)}">${escapeHtml(p.nombre)}</h4>
-        <p class="small">${escapeHtml(p.codigo)} • ${escapeHtml(p.categoria||'')}</p>
+        <p class="small">${escapeHtml(p.codigo)} • ${escapeHtml(p.categoria || '')}</p>
+
         <div class="row">
           <label class="small">Orden:
-            <input type="number" class="inp-order" value="${p.orden||0}" min="0">
+            <input type="number" class="inp-order" value="${p.orden || 0}" min="0">
           </label>
+
           <label class="small">Habilitado:
             <input type="checkbox" class="inp-enabled" ${p.habilitado ? 'checked' : ''}>
           </label>
+
           <button class="thumb-button btn-img">Imagen</button>
+        </div>
+
+        <div class="order-buttons">
+          <button class="btn-up">▲</button>
+          <button class="btn-down">▼</button>
         </div>
       </div>
     `;
 
-    // order change
-    div.querySelector('.inp-order').addEventListener('change', async (ev)=>{
-      const v = Number(ev.target.value) || 0;
-      try{
-        await api(`/api/products/${p.id}/order`, 'PUT', { orden: v });
-        p.orden = v;
+  // CAMBIAR ORDEN con input
+  div.querySelector('.inp-order').addEventListener('change', async (ev) => {
+    const v = Number(ev.target.value) || 0;
+    try {
+      await api(`/api/products/${p.id}/order`, 'PUT', { orden: v });
+      p.orden = v;
+
+      if (!suppressOrderReload) {
         await loadProducts(true);
-      }catch(err){ alert('No se pudo actualizar orden'); console.error(err); }
-    });
+      }
 
-    // habilitado toggle
-    div.querySelector('.inp-enabled').addEventListener('change', async (ev)=>{
-      const val = Boolean(ev.target.checked);
-      try{
-        await api(`/api/products/${p.id}/state`, 'PUT', { habilitado: val });
-        p.habilitado = val;
-        renderFiltered();
-      }catch(err){ alert('No se pudo actualizar estado'); console.error(err); }
-    });
+    } catch (err) {
+      alert('No se pudo actualizar orden');
+      console.error(err);
+    }
+  });
 
-    // open modal image
-    div.querySelector('.btn-img').addEventListener('click', ()=>{
+
+
+    // MODAL IMAGEN
+    div.querySelector('.btn-img').addEventListener('click', () => {
       currentEditCodigo = p.codigo;
       modalPreview.src = p.imagen_url ? p.imagen_url : 'placeholder.jpg';
       modalFile.value = '';
-      modal.setAttribute('aria-hidden','false');
+      modal.setAttribute('aria-hidden', 'false');
     });
 
-    // drag events
-    div.addEventListener('dragstart', (e)=> {
-      e.dataTransfer.setData('text/plain', p.codigo);
-      div.classList.add('dragging');
+    // BOTÓN SUBIR
+    div.querySelector('.btn-up').addEventListener('click', async () => {
+      await moveProduct(p.id, -1);
     });
-    div.addEventListener('dragend', ()=> div.classList.remove('dragging'));
 
-    // allow drop on others
-    div.addEventListener('dragover', (e)=> {
-      e.preventDefault();
-      const after = getDragAfterElement(listEl, e.clientY);
-      const dragging = document.querySelector('.product-card.dragging');
-      if(!dragging) return;
-      if(after == null) listEl.appendChild(dragging);
-      else listEl.insertBefore(dragging, after);
+    // BOTÓN BAJAR
+    div.querySelector('.btn-down').addEventListener('click', async () => {
+      await moveProduct(p.id, +1);
     });
 
     listEl.appendChild(div);
   });
-
-  // when user finishes drag (drop anywhere), compute new order and save
-  listEl.addEventListener('drop', async (e)=>{
-    e.preventDefault();
-    // compute new orders from DOM order
-    const nodes = Array.from(listEl.querySelectorAll('.product-card'));
-    const updates = [];
-    for(let i=0;i<nodes.length;i++){
-      const node = nodes[i];
-      const id = Number(node.dataset.id);
-      const newOrden = i + 1; // 1-based ranking
-      const prod = products.find(x=>x.id === id);
-      if(prod && prod.orden !== newOrden){
-        updates.push({ id, orden: newOrden, codigo: node.dataset.codigo });
-      }
-    }
-    if(updates.length === 0){ return; }
-    // save sequentially to backend
-    try{
-      for(const u of updates){
-        await api(`/api/products/${u.id}/order`, 'PUT', { orden: u.orden });
-      }
-      // reload
-      await loadProducts(true);
-      alert('Orden guardado');
-    }catch(err){
-      console.error(err);
-      alert('Error guardando ordenes');
-    }
-  }, { once: false });
 }
 
-// helper to find drop position
-function getDragAfterElement(container, y){
-  const draggableElements = [...container.querySelectorAll('.product-card:not(.dragging)')];
-  return draggableElements.reduce((closest, child) => {
-    const box = child.getBoundingClientRect();
-    const offset = y - box.top - box.height / 2;
-    if(offset < 0 && offset > closest.offset){
-      return { offset: offset, element: child };
-    }else return closest;
-  }, { offset: Number.NEGATIVE_INFINITY }).element;
+async function moveProduct(productId, direction) {
+  // SIEMPRE trabajar sobre una lista ordenada real (no sobre products)
+  const sorted = [...products].sort((a, b) => 
+    (a.orden ?? 999999) - (b.orden ?? 999999)
+  );
+
+  const index = sorted.findIndex(p => p.id === productId);
+  if (index === -1) return;
+
+  const newIndex = index + direction;
+
+  // fuera de rango
+  if (newIndex < 0 || newIndex >= sorted.length) return;
+
+  // intercambiar
+  const temp = sorted[index];
+  sorted[index] = sorted[newIndex];
+  sorted[newIndex] = temp;
+
+  // reasignar orden secuencial correcto sin romper nada
+  for (let i = 0; i < sorted.length; i++) {
+    sorted[i].orden = i + 1;
+  }
+
+  try {
+    // GUARDA SOLO LOS DOS QUE CAMBIARON
+    await api(`/api/products/${sorted[index].id}/order`, 'PUT', {
+      orden: sorted[index].orden
+    });
+
+    await api(`/api/products/${sorted[newIndex].id}/order`, 'PUT', {
+      orden: sorted[newIndex].orden
+    });
+
+    // recargar una sola vez
+    await loadProducts(true);
+
+  } catch (err) {
+    console.error(err);
+    alert("Error reordenando");
+  }
 }
+
+
+
 
 /* ------------------ MODAL IMAGE ------------------ */
 modalClose.addEventListener('click', ()=> modal.setAttribute('aria-hidden','true'));

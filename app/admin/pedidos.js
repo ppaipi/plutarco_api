@@ -1,5 +1,7 @@
 // pedidos.js - versión mejorada con typeahead y delete
-const ordersBox = document.getElementById("orders");
+const listEl = document.getElementById("list");
+const filterMonth = document.getElementById("filter-month"); // NUEVO
+const filterSort = document.getElementById("filter-sort");   // NUEVO
 const search = document.getElementById("search");
 const filterStatus = document.getElementById("filter-status");
 const filterDate = document.getElementById("filter-date");
@@ -89,56 +91,97 @@ async function loadOrders(){
 }
 
 // ===================== RENDER ORDERS =====================
-function render(){
-  ordersBox.innerHTML = '';
-  const q = (search.value || '').toLowerCase();
-  const state = filterStatus.value;
-  const date = filterDate.value;
+function render() {
 
-  const filtered = orders.filter(o=>{
-    if(q){
-      const s = `${o.nombre_completo||''} ${o.correo||''} ${o.direccion||''}`.toLowerCase();
-      if(!s.includes(q)) return false;
+  const month = document.getElementById("filter-month").value;
+  const sortDir = document.getElementById("filter-sort").value;
+
+  let pageSize = (page + 1) * PAGE_SIZE;
+
+  // === FILTRAR POR MES ===
+  const filtered = orders.filter(o => {
+    if (month) {
+      // si no existe dia_entrega o no empieza con "YYYY-MM"
+      if (!o.dia_entrega || !o.dia_entrega.startsWith(month)) {
+        return false;
+      }
     }
-    if(state === 'pendiente' && (o.confirmado || o.entregado)) return false;
-    if(state === 'confirmado' && !o.confirmado) return false;
-    if(state === 'entregado' && !o.entregado) return false;
-    if(date && (o.dia_entrega !== date)) return false;
     return true;
   });
 
-  const slice = filtered.slice(0, (page+1)*PAGE_SIZE);
-  if(slice.length === 0){
-    ordersBox.innerHTML = `<div class="card no-results">No hay pedidos</div>`;
+  // === ORDEN ASC/DESC ===
+  const ordered = filtered.sort((a, b) => {
+    const da = a.dia_entrega || "";
+    const db = b.dia_entrega || "";
+
+    return sortDir === "asc"
+      ? da.localeCompare(db)  // más antiguo primero
+      : db.localeCompare(da); // más nuevo primero
+  });
+
+  // === PAGINACIÓN ===
+  const slice = ordered.slice(0, pageSize);
+
+  // === LIMPIAR LISTA ===
+  listEl.innerHTML = "";
+
+  if (slice.length === 0) {
+    listEl.innerHTML = `
+      <div class="no-results card">
+        No hay pedidos para este filtro
+      </div>`;
     return;
   }
 
-  for(const o of slice){
-    const card = document.createElement('div');
-    card.className = 'card';
-    const total = (o.envio_cobrado || 0) + 0;
-    card.innerHTML = `
-      <h3 style="display:flex;gap:8px;align-items:center;justify-content:space-between">
-        <span>${escapeHtml(o.nombre_completo || '—')}</span>
-        <span style="font-size:13px;color:var(--muted)">#${o.id}</span>
-      </h3>
-      <p class="small">${escapeHtml(o.correo || '')}</p>
-      <p class="small">${escapeHtml(o.telefono || '')} • ${escapeHtml(o.direccion || '')}</p>
-      <p class="small">Entrega: <b>${o.dia_entrega || '-'}</b></p>
-      <p class="small">Total: $${(o.envio_cobrado||0).toFixed ? (o.envio_cobrado||0).toFixed(2) : (o.envio_cobrado||0)}</p>
+  // === RENDERIZAR CADA PEDIDO ===
+  slice.forEach(o => {
 
-      <div class="row" style="margin-top:8px">
-        <button class="btn small" data-id="${o.id}" data-action="edit">Ver / Editar</button>
-        <button class="btn ghost small" data-id="${o.id}" data-action="print">Imprimir</button>
-        <button class="btn danger small" data-id="${o.id}" data-action="delete">Eliminar</button>
+    const card = document.createElement("div");
+    card.className = "order-card";
+
+    card.innerHTML = `
+      <div class="header">
+        <h3>Pedido #${escapeHtml(o.id)} — ${escapeHtml(o.nombre || "")}</h3>
+        <span class="date">${escapeHtml(o.dia_entrega || "-")}</span>
+      </div>
+
+      <div class="row">
+        <strong>Email:</strong> ${escapeHtml(o.email || "")}
+      </div>
+      <div class="row">
+        <strong>Teléfono:</strong> ${escapeHtml(o.telefono || "")}
+      </div>
+
+      <div class="row">
+        <strong>Dirección:</strong> ${escapeHtml(o.direccion || "")}
+      </div>
+
+      <div class="row">
+        <strong>Productos:</strong>
+        <div class="prod-box">${escapeHtml(o.productos || "")}</div>
+      </div>
+
+      <div class="row">
+        <strong>Total:</strong> $${escapeHtml(o.total || "0")}
+      </div>
+
+      <div class="row">
+        <button class="btn small" data-edit="${o.id}">Editar</button>
+        <button class="btn small btn-danger" data-delete="${o.id}">Eliminar</button>
       </div>
     `;
-    // attach actions
-    card.querySelector('button[data-action="edit"]').onclick = ()=> openEdit(o);
-    card.querySelector('button[data-action="delete"]').onclick = ()=> confirmAndDelete(o.id);
-    ordersBox.appendChild(card);
+
+    listEl.appendChild(card);
+  });
+
+  // === BOTÓN "CARGAR MÁS" ===
+  if (ordered.length > pageSize) {
+    btnLoadMore.classList.remove("hidden");
+  } else {
+    btnLoadMore.classList.add("hidden");
   }
 }
+
 
 // ===================== ESCAPE HTML =====================
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -433,6 +476,33 @@ btnDeleteOrder.addEventListener('click', async ()=>{
     alert('Error eliminando pedido: ' + e.message);
   }
 });
+function populateMonths() {
+  const select = document.getElementById("filter-month");
+  const months = new Set();
+
+  orders.forEach(o => {
+    if (o.dia_entrega) {
+      const m = o.dia_entrega.slice(0,7); // YYYY-MM
+      months.add(m);
+    }
+  });
+
+  const arr = Array.from(months).sort().reverse(); // últimos primero
+
+  select.innerHTML = `<option value="">Todos los meses</option>`;
+  arr.forEach(m => {
+    const [y,mo] = m.split("-");
+    const label = `${mo}/${y}`;
+    const opt = document.createElement("option");
+    opt.value = m;
+    opt.textContent = label;
+    select.appendChild(opt);
+  });
+
+  // seleccionar automáticamente el último mes
+  if (arr.length > 0) select.value = arr[0];
+}
+
 
 // pagination & filters
 btnLoadMore.addEventListener('click', ()=> { page++; render(); });
@@ -442,3 +512,5 @@ filterDate.addEventListener('change', ()=> { page = 0; render(); });
 
 // init
 loadOrders();
+populateMonths();
+render();

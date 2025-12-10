@@ -58,14 +58,14 @@ def on_startup():
 # Archivos estáticos (panel admin)
 # -------------------------
 # Redirección manual a index.html
-@app.get("/products/")
+@app.get("/productos/")
 async def admin_root():
     file_path = os.path.join("app", "admin", "products.html")
     return FileResponse(file_path)
 
 
 # Servir archivos estáticos
-app.mount("/products", StaticFiles(directory="app/admin"), name="products")
+app.mount("/productos", StaticFiles(directory="app/admin"), name="productos")
 
 @app.get("/pedidos/")
 async def admin_root():
@@ -477,6 +477,17 @@ def api_delete_order(order_id: int):
         session.commit()
         return {"ok": True, "deleted": order_id}
 
+@app.post("/api/products/reset-order")
+def api_reset_order():
+    with get_session() as session:
+        products = session.exec(select(Product)).all()
+        for p in products:
+            p.orden = None   # o 0 si preferís
+            session.add(p)
+        session.commit()
+    return {"ok": True, "reset": len(products)}
+
+
 # -------------------------
 # BUSCADOR DE PRODUCTOS (TYPEAHEAD)
 # -------------------------
@@ -492,93 +503,81 @@ def api_products_search(q: Optional[str] = None, limit: int = 20):
             (Product.nombre.ilike(term)) | (Product.codigo.ilike(term))
         ).order_by(Product.orden.asc()).limit(limit)
         return session.exec(stmt).all()
+
 @app.post("/api/orders/import-excel")
 async def api_import_orders_excel(file: UploadFile = File(...)):
-    """
-    Importa pedidos desde Excel, ignorando la columna Productos.
-    Todos los pedidos tendrán un único producto:
-    - codigo = "GENÉRICO"
-    - nombre = "Producto Genérico"
-    - cantidad = 1
-    - precio_unitario = total (subtotal + envio)
-    """
-
     if not file.filename.lower().endswith((".xlsx", ".xls")):
-        raise HTTPException(400, "Debe ser un archivo Excel (.xlsx o .xls)")
+        raise HTTPException(status_code=400, detail="Archivo debe ser Excel")
 
     content = await file.read()
-    df = pd.read_excel(io.BytesIO(content)).fillna("")
+    df = pd.read_excel(io.BytesIO(content), engine="openpyxl").fillna("")
 
-    importados = 0
-    errores = 0
-    detalles = []
-
-    def parse_money(v):
-        if v == "" or v is None:
-            return 0
-        return float(str(v).replace(".", "").replace(",", "."))
+    created = 0
+    errors = []
 
     with get_session() as session:
-
         for idx, row in df.iterrows():
             try:
-                nombre = row.get("Nombre", "").strip()
-                correo = row.get("Email", "").strip()
+                nombre = str(row.get("Nombre", "")).strip()
+                email = str(row.get("Email", "")).strip()
 
-                if not nombre or not correo:
-                    errores += 1
-                    detalles.append({"fila": idx+1, "error": "Falta nombre o email"})
+                if not nombre:
+                    errors.append(f"Fila {idx+1}: sin nombre")
                     continue
 
-                subtotal = parse_money(row.get("Subtotal"))
-                envio = parse_money(row.get("Envio"))
-                total = parse_money(row.get("total"))
+                # Día entrega
+                dia_raw = row.get("dia de entrega", "")
+                try:
+                    dia_entrega = (
+                        pd.to_datetime(dia_raw).date()
+                        if dia_raw else None
+                    )
+                except:
+                    dia_entrega = None
 
-                # fallback: si no viene total, lo calculo
-                if total == 0:
-                    total = subtotal + envio
+                # TOTAL REAL
+                total_excel = (
+                    row.get("total") or
+                    row.get("Total") or
+                    row.get("Subtotal") or
+                    0
+                )
+
+                try:
+                    total_excel = float(str(total_excel).replace("$", "").replace(".", "").replace(",", "."))
+                except:
+                    total_excel = 0
 
                 order = Order(
-                    dia_entrega=row.get("dia de entrega") if row.get("dia de entrega") else None,
                     nombre_completo=nombre,
-                    correo=correo,
+                    correo=email,
                     telefono=str(row.get("Telefono", "")),
-                    direccion=row.get("Direccion", ""),
-                    comentario=row.get("Comentario", ""),
-
-                    envio_cobrado=envio,
-                    costo_envio_real=parse_money(row.get("COSTO ENVIO")),
-
-                    confirmado=str(row.get("confirmado y pagado", "")).upper() == "TRUE",
-                    entregado=str(row.get("entregado", "")).upper() == "TRUE",
+                    direccion=str(row.get("Direccion", "")),
+                    comentario=str(row.get("Comentario", "")),
+                    dia_entrega=dia_entrega,
+                    envio_cobrado=total_excel,
+                    costo_envio_real=0,
+                    confirmado=str(row.get("confirmado y pagado","")).strip().upper() == "TRUE",
+                    entregado=str(row.get("entregado","")).strip().upper() == "TRUE"
                 )
 
-                # Crear pedido
-                new_order = create_order(session, order, [])
+                session.add(order)
+                session.commit()
+                session.refresh(order)
 
-                # Insertar producto genérico
-                gen = OrderProduct(
-                    order_id=new_order.id,
-                    product_id=None,
-                    codigo="GENÉRICO",
-                    nombre="Producto Genérico",
+                # Agregar ITEM GENÉRICO
+                op = OrderProduct(
+                    order_id=order.id,
+                    nombre="PRODUCTO GENERICO",
                     cantidad=1,
-                    precio_unitario=total
+                    precio_unitario=total_excel
                 )
-
-                session.add(gen)
+                session.add(op)
                 session.commit()
 
-                importados += 1
-                detalles.append({"fila": idx+1, "ok": True})
+                created += 1
 
             except Exception as e:
-                errores += 1
-                detalles.append({"fila": idx+1, "error": str(e)})
+                errors.append(f"Fila {idx+1}: {str(e)}")
 
-    return {
-        "ok": True,
-        "importados": importados,
-        "errores": errores,
-        "detalles": detalles
-    }
+    return {"created": created, "errors": errors}

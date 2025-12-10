@@ -58,14 +58,14 @@ def on_startup():
 # Archivos estáticos (panel admin)
 # -------------------------
 # Redirección manual a index.html
-@app.get("/admin/")
+@app.get("/products/")
 async def admin_root():
-    file_path = os.path.join("app", "admin", "index.html")
+    file_path = os.path.join("app", "admin", "products.html")
     return FileResponse(file_path)
 
 
 # Servir archivos estáticos
-app.mount("/admin", StaticFiles(directory="app/admin"), name="admin")
+app.mount("/products", StaticFiles(directory="app/admin"), name="products")
 
 @app.get("/pedidos/")
 async def admin_root():

@@ -274,22 +274,29 @@ function closeModalUI(){
   modal.setAttribute('aria-hidden','true');
 }
 async function get_image_link(codigo){
-
-  const res = await api(`/api/products/by-codigo/${codigo}`);
-  if(res && res.image_url) return res.image_url;
-  else return 'placeholder.jpg';
+  try{
+    const res = await api(`/api/products/by-codigo/${codigo}`);
+    if(res && res.imagen_url) {
+      return res.imagen_url;
+    } else {
+      return 'placeholder.jpg';
+    }
+  }catch(err){
+    return 'placeholder.jpg';
+  }
 }
 
 // ===================== ITEMS TABLE =====================
 function renderItemsTable(){
   itemsTableBody.innerHTML = '';
   let subtotal = 0;
-  items.forEach((it, idx)=>{
+  items.forEach(async (it, idx)=>{
     const subtotalItem = (Number(it.cantidad||0) * Number(it.precio_unitario||0));
     subtotal += subtotalItem;
     const tr = document.createElement('tr');
+    const imagen = await get_image_link(it.codigo); 
     tr.innerHTML = `
-      <td><img src="${get_image_link(it.codigo)}" alt="Imagen" style="width:50px;height:50px;object-fit:cover;border:1px solid #ccc;"></td>
+      <td><img src="${imagen}" alt="Imagen" style="width:50px;height:50px;object-fit:cover;"></td>
       <td><input class="input" data-idx="${idx}" data-field="codigo" value="${escapeHtml(it.codigo||'')}"></td>
       <td><input class="input" data-idx="${idx}" data-field="nombre" value="${escapeHtml(it.nombre||'')}"></td>
       <td><input class="input" data-idx="${idx}" data-field="cantidad" type="number" style="width:80px" value="${it.cantidad||1}"></td>

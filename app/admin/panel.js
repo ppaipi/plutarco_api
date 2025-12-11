@@ -197,7 +197,8 @@ function renderList(list) {
 
       <div class="meta">
         <h4 title="${escapeHtml(p.nombre)}">${escapeHtml(p.nombre)}</h4>
-        <p class="small">${escapeHtml(p.codigo)} • ${escapeHtml(p.categoria || '')}</p>
+        <p class="small">${escapeHtml(p.codigo)} • $${escapeHtml(p.precio || '')}</p>
+        ${p.categoria || p.subcategoria ? `<p class="small">${escapeHtml(p.categoria || '')} • ${escapeHtml(p.subcategoria || '')}</p>` : ''}
 
         <div class="row">
           <label class="small">Orden:
@@ -332,7 +333,7 @@ fileExcel.addEventListener('change', async (e)=>{
   const f = e.target.files[0]; if(!f) return;
   const fd = new FormData(); fd.append('file', f);
   try{
-    const r = await api('/products/import', 'POST', fd, true);
+    const r = await api('/api/products/import', 'POST', fd, true);
     alert(`Import: ${r.created} creados, ${r.updated} actualizados, ${r.skipped} saltados`);
     await loadProducts(true);
   }catch(err){ console.error(err); alert('Error importando Excel') }

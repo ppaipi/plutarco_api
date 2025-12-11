@@ -1,34 +1,50 @@
 # app/main.py
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends, Body, Request, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, FileResponse
-
+from datetime import date, datetime
 from sqlmodel import Session, select
 from .database import engine, init_db, get_session
 from .models import Product, Order, OrderProduct
 from .crud import (
-    create_order, update_order, list_orders, get_order,
     update_or_create_product_by_data, get_product_by_codigo,
-    set_product_habilitado, set_product_orden,
+    set_product_habilitado,
     import_habilitados_from_list, import_ordenes_from_mapping
 )
 
 import pandas as pd
-from .import_excel import parse_precio
-from typing import List, Optional
-from datetime import datetime
+import json
 import io
 import csv
-import json
-from dotenv import load_dotenv
-from openpyxl import load_workbook
 import os
-import re
-from decimal import Decimal
+from typing import List, Optional
+from dotenv import load_dotenv
+
+# -------------------------
+# RECOMPUTAR TOTALES
+# -------------------------
+def recompute_order_totals(session: Session, order: Order):
+    productos = session.exec(
+        select(OrderProduct).where(OrderProduct.order_id == order.id)
+    ).all()
+
+    order.subtotal = sum(
+        (p.cantidad or 0) * (p.precio_unitario or 0)
+        for p in productos
+    )
+
+    order.total = order.subtotal + (order.envio_cobrado or 0)
+
+    session.add(order)
+    session.commit()
+    session.refresh(order)
+
+    return order
 
 
 # -------------------------
-# Cargar variables de entorno
+# ENV, CARPETAS
 # -------------------------
 load_dotenv()
 IMAGES_DIR = "/data/images"
@@ -39,120 +55,101 @@ API_KEY = os.getenv("API_KEY")
 
 
 # -------------------------
-# Inicializar API
+# FASTAPI APP
 # -------------------------
-app = FastAPI(title="API Pedidos y Productos - extendida")
-@app.get("/images/{filename}")
-def serve_image(filename: str):
-    filepath = os.path.join(IMAGES_DIR, filename)
-    if not os.path.exists(filepath):
-        raise HTTPException(404, "Imagen no encontrada")
-    return FileResponse(filepath)
+app = FastAPI(title="API Pedidos y Productos - FINAL")
 
 @app.on_event("startup")
-def on_startup():
+def startup():
     init_db()
 
 
 # -------------------------
-# Archivos estáticos (panel admin)
+# IMÁGENES
 # -------------------------
-# Redirección manual a index.html
+@app.get("/images/{filename}")
+def serve_image(filename: str):
+    path = os.path.join(IMAGES_DIR, filename)
+    if not os.path.exists(path):
+        raise HTTPException(404, "Imagen no encontrada")
+    return FileResponse(path)
+
+
+# -------------------------
+# ARCHIVOS DEL PANEL
+# -------------------------
 @app.get("/productos/")
-async def admin_root():
-    file_path = os.path.join("app", "admin", "products.html")
-    return FileResponse(file_path)
+async def productos_root():
+    return FileResponse("app/admin/products.html")
 
-
-# Servir archivos estáticos
 app.mount("/productos", StaticFiles(directory="app/admin"), name="productos")
 
+
 @app.get("/pedidos/")
-async def admin_root():
-    file_path = os.path.join("app", "admin", "pedidos.html")
-    return FileResponse(file_path)
+async def pedidos_root():
+    return FileResponse("app/admin/pedidos.html")
 
-
-# Servir archivos estáticos
 app.mount("/pedidos", StaticFiles(directory="app/admin"), name="pedidos")
 
-# -------------------------
-# LOGIN ADMIN (para tu panel HTML)
-# -------------------------
 
+# -------------------------
+# LOGIN ADMIN
+# -------------------------
 @app.post("/api/admin/login")
-def admin_login(
-    username: str = Form(...),
-    password: str = Form(...)
-):
-
+def admin_login(username: str = Form(...), password: str = Form(...)):
     if username == ADMIN_USER and password == ADMIN_PASS:
-        return {"access_token": API_KEY, "token_type": "bearer"}
+        return {"access_token": API_KEY}
+    raise HTTPException(401, "Credenciales incorrectas")
 
-    raise HTTPException(status_code=401, detail="Credenciales incorrectas")
 
 # -------------------------
-# MIDDLEWARE DE API KEY
+# API KEY MIDDLEWARE
 # -------------------------
 PROTECTED_PATHS = [
-    "/api/products/import",
-    "/api/products/import-habilitados",
-    "/api/products/import-ordenes",
-    "/api/products/",    
+    "/api/products",
     "/api/orders",
 ]
-
 
 @app.middleware("http")
 async def api_key_middleware(request: Request, call_next):
     path = request.url.path
-
-    # Determinar si la ruta debe estar protegida
     if any(path.startswith(p) for p in PROTECTED_PATHS):
-
         key = request.headers.get("x-api-key")
         if key != API_KEY:
-            return JSONResponse(
-                {"error": "Unauthorized - Missing or invalid API Key"},
-                status_code=401
-            )
-
+            return JSONResponse({"error": "Unauthorized"}, status_code=401)
     return await call_next(request)
 
 
 # -------------------------
-# Productos (PÚBLICOS)
+# PRODUCTOS – GET
 # -------------------------
 @app.get("/api/products", response_model=List[Product])
 def api_get_products():
-    with get_session() as session:
-        stmt = select(Product).order_by(Product.orden.asc())
-        return session.exec(stmt).all()
+    with get_session() as s:
+        return s.exec(select(Product).order_by(Product.orden.asc())).all()
+
 
 @app.get("/api/products/enabled", response_model=List[Product])
-def api_get_enabled():
-    with get_session() as session:
-        stmt = select(Product).where(Product.habilitado == True).order_by(Product.orden.asc())
-        return session.exec(stmt).all()
+def api_enabled():
+    with get_session() as s:
+        return s.exec(select(Product).where(Product.habilitado == True)
+                      .order_by(Product.orden.asc())).all()
 
 
 @app.get("/api/products/by-codigo/{codigo}", response_model=Product)
-def api_get_product_by_codigo(codigo: str):
-    with get_session() as session:
-        prod = get_product_by_codigo(session, codigo)
+def api_get_by_codigo(codigo: str):
+    with get_session() as s:
+        prod = get_product_by_codigo(s, codigo)
         if not prod:
-            raise HTTPException(status_code=404, detail="Producto no encontrado")
+            raise HTTPException(404, "Producto no encontrado")
         return prod
 
 
 # -------------------------
-# IMPORTAR PRODUCTOS (ADMIN)
+# IMPORTAR PRODUCTOS
 # -------------------------
 @app.post("/api/products/import")
 async def import_products(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith((".xlsx", ".xls")):
-        raise HTTPException(status_code=400, detail="Archivo debe ser .xlsx o .xls")
-
     content = await file.read()
     df = pd.read_excel(io.BytesIO(content), engine="openpyxl").fillna("")
 
@@ -174,375 +171,291 @@ async def import_products(file: UploadFile = File(...)):
             data = {
                 "codigo": codigo,
                 "nombre": nombre,
-                "descripcion": str(row.get("DESCRIPCION ADICIONAL", "")).strip(),
-                "categoria": str(row.get("RUBRO", "")).strip(),
-                "subcategoria": str(row.get("SUBRUBRO", "")).strip(),
-                "precio": parse_precio(row.get("PRECIO VENTA C/IVA", 0)),
-                "proveedor": str(row.get("PROVEEDOR", "")).strip(),
+                "categoria": str(row.get("RUBRO", "")),
+                "subcategoria": str(row.get("SUBRUBRO", "")),
+                "precio": float(row.get("PRECIO VENTA C/IVA", 0)),
             }
 
-            existing = session.exec(
-                select(Product).where(Product.codigo == codigo)
-            ).first()
+            existing = session.exec(select(Product).where(Product.codigo == codigo)).first()
 
-            if existing:
-                update_or_create_product_by_data(session, data)
-                updated += 1
-            else:
-                update_or_create_product_by_data(session, data)
-                created += 1
+            update_or_create_product_by_data(session, data)
+            created += 1 if not existing else 0
+            updated += 1 if existing else 0
 
-    return {
-        "ok": True,
-        "created": created,
-        "updated": updated,
-        "skipped": skipped,
-        "total_rows": len(df)
-    }
+    return {"created": created, "updated": updated, "skipped": skipped}
 
 
 # -------------------------
-# CAMBIAR ESTADO/ORDEN (ADMIN)
+# PRODUCTOS – ESTADO
 # -------------------------
 @app.put("/api/products/{product_id}/state")
-def api_set_product_state(product_id: int, payload: dict = Body(...)):
+def api_set_state(product_id: int, payload: dict):
     if "habilitado" not in payload:
-        raise HTTPException(status_code=400, detail="Falta 'habilitado'")
-    with get_session() as session:
-        prod = set_product_habilitado(session, product_id=product_id, habilitado=payload["habilitado"])
+        raise HTTPException(400, "Falta habilitado")
+    with get_session() as s:
+        prod = set_product_habilitado(s, product_id, payload["habilitado"])
         if not prod:
-            raise HTTPException(status_code=404, detail="Producto no encontrado")
-        return {"ok": True, "product": prod}
+            raise HTTPException(404)
+        return {"ok": True}
 
 
+# -------------------------
+# SET ORDEN
+# -------------------------
 @app.put("/api/products/{product_id}/order")
-def api_set_product_order(product_id: int, payload: dict = Body(...)):
+def api_set_order(product_id: int, payload: dict):
     if "orden" not in payload:
-        raise HTTPException(status_code=400, detail="Falta 'orden'")
+        raise HTTPException(400, "Falta orden")
 
-    with get_session() as session:
-        prod = session.get(Product, product_id)
+    with get_session() as s:
+        prod = s.get(Product, product_id)
         if not prod:
-            raise HTTPException(status_code=404, detail="Producto no encontrado")
+            raise HTTPException(404)
 
         prod.orden = payload["orden"]
-        session.add(prod)
-        session.commit()
-        session.refresh(prod)
-        return {"ok": True, "product": prod}
+        s.commit()
+        s.refresh(prod)
 
-# -------------------------
-# IMPORTAR HABILITADOS (ADMIN)
-# -------------------------
-@app.post("/api/products/import-habilitados")
-async def api_import_habilitados(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(".json"):
-        raise HTTPException(status_code=400, detail="Archivo debe ser .json")
-
-    content = await file.read()
-    try:
-        codigos = json.loads(content.decode("utf-8"))
-        if not isinstance(codigos, list):
-            raise ValueError()
-    except Exception:
-        raise HTTPException(status_code=400, detail="JSON inválido")
-
-    codigos = [str(c).strip() for c in codigos if str(c).strip()]
-
-    with get_session() as session:
-        result = import_habilitados_from_list(
-            session,
-            codigos_list=codigos,
-            replace_others=True
-        )
-
-    return {"ok": True, "result": result}
+        return {"ok": True}
 
 
 # -------------------------
-# IMPORTAR ORDENES (ADMIN)
+# BUSCADOR TYPEAHEAD
 # -------------------------
-@app.post("/api/products/import-ordenes")
-async def api_import_ordenes(
-    file: UploadFile = File(...),
-    match_by: Optional[str] = "nombre"
-):
-    if not file.filename.lower().endswith((".csv", ".txt")):
-        raise HTTPException(status_code=400, detail="Archivo debe ser .csv")
+@app.get("/api/products/search", response_model=List[Product])
+def api_search(q: Optional[str] = None, limit: int = 20):
+    with get_session() as s:
+        if not q:
+            return s.exec(select(Product).order_by(Product.nombre).limit(limit)).all()
 
-    content = await file.read()
-    reader = csv.reader(io.StringIO(content.decode("utf-8")), delimiter=";")
-
-    mapping = []
-    for row in reader:
-        if len(row) < 2:
-            continue
-
-        raw_orden = row[0].strip()
-        val = row[1].strip()
-
-        # ❌ Si la primera columna NO es un número, la saltamos (headers)
-        if not raw_orden.isdigit():
-            continue
-
-        orden = int(raw_orden)
-
-        mapping.append(
-            {"orden": orden, "codigo": val} if match_by == "codigo"
-            else {"orden": orden, "nombre": val}
-        )
+        term = f"%{q.lower().strip()}%"
+        return s.exec(
+            select(Product)
+            .where(Product.nombre.ilike(term) | Product.codigo.ilike(term))
+            .order_by(Product.nombre)
+            .limit(limit)
+        ).all()
 
 
-    with get_session() as session:
-        result = import_ordenes_from_mapping(session, mapping, match_by=match_by)
-
-    return {"ok": True, "result": result}
-
+# =====================================================
+# =====================  PEDIDOS  ======================
+# =====================================================
 
 # -------------------------
-# PEDIDOS (PÚBLICOS)
+# CREAR PEDIDO (POST)
 # -------------------------
 @app.post("/api/orders")
 def api_create_order(payload: dict):
-    required = ["nombre_completo", "correo", "productos"]
-    for r in required:
-        if r not in payload:
-            raise HTTPException(status_code=400, detail=f"Falta campo {r}")
 
+    # fecha
     if payload.get("dia_entrega"):
-        try:
-            payload["dia_entrega"] = datetime.fromisoformat(payload["dia_entrega"]).date()
-        except:
-            raise HTTPException(status_code=400, detail="Fecha inválida")
+        payload["dia_entrega"] = date.fromisoformat(payload["dia_entrega"])
 
     order = Order(
-        dia_entrega=payload.get("dia_entrega"),
         nombre_completo=payload["nombre_completo"],
         correo=payload["correo"],
         telefono=payload.get("telefono", ""),
         direccion=payload.get("direccion", ""),
         comentario=payload.get("comentario", ""),
+        dia_entrega=payload.get("dia_entrega"),
         envio_cobrado=float(payload.get("envio_cobrado", 0)),
         costo_envio_real=float(payload.get("costo_envio_real", 0)),
         confirmado=bool(payload.get("confirmado", False)),
         entregado=bool(payload.get("entregado", False)),
     )
 
-    with get_session() as session:
-        new_order = create_order(session, order, payload["productos"])
-        prods = session.exec(select(OrderProduct).where(OrderProduct.order_id == new_order.id)).all()
-        return {"order": new_order, "productos": prods}
+    productos_payload = payload.get("productos", [])
+
+    with get_session() as s:
+        s.add(order)
+        s.commit()
+        s.refresh(order)
+
+        # crear productos
+        for p in productos_payload:
+            product_db = None
+            if p.get("codigo"):
+                product_db = s.exec(select(Product).where(Product.codigo == p["codigo"])).first()
+
+            op = OrderProduct(
+                codigo=p.get("codigo") or (product_db.codigo if product_db else "GENERIC"),
+                order_id=order.id,
+                product_id=product_db.id if product_db else None,
+                nombre=p.get("nombre") or (product_db.nombre if product_db else ""),
+                cantidad=int(p.get("cantidad", 1)),
+                precio_unitario=float(p.get("precio_unitario", 0)),
+            )
+            s.add(op)
+
+        s.commit()
+        recompute_order_totals(s, order)
+
+        items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
+
+        return {"order": order, "productos": items}
 
 
+# -------------------------
+# ACTUALIZAR PEDIDO (PUT)
+# -------------------------
 @app.put("/api/orders/{order_id}")
 def api_update_order(order_id: int, payload: dict):
-    with get_session() as session:
-        updated = update_order(session, order_id, payload)
-        if not updated:
-            raise HTTPException(status_code=404, detail="Pedido no encontrado")
-        prods = session.exec(select(OrderProduct).where(OrderProduct.order_id == updated.id)).all()
-        return {"order": updated, "productos": prods}
+
+    with get_session() as s:
+        order = s.get(Order, order_id)
+        if not order:
+            raise HTTPException(404, "Pedido no encontrado")
+
+        # actualizar campos
+        if payload.get("dia_entrega"):
+            try:
+                order.dia_entrega = date.fromisoformat(payload["dia_entrega"])
+            except:
+                raise HTTPException(400, "Fecha inválida")
+
+        order.nombre_completo = payload.get("nombre_completo", order.nombre_completo)
+        order.correo = payload.get("correo", order.correo)
+        order.telefono = payload.get("telefono", order.telefono)
+        order.direccion = payload.get("direccion", order.direccion)
+        order.comentario = payload.get("comentario", order.comentario)
+        order.envio_cobrado = float(payload.get("envio_cobrado", order.envio_cobrado))
+        order.costo_envio_real = float(payload.get("costo_envio_real", order.costo_envio_real))
+        order.confirmado = bool(payload.get("confirmado", order.confirmado))
+        order.entregado = bool(payload.get("entregado", order.entregado))
+
+        # -------------------------
+        # REEMPLAZAR PRODUCTOS
+        # -------------------------
+        if "items" in payload:     # <--- AHORA SÍ
+            # borrar productos anteriores
+            old_items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
+            for it in old_items:
+                s.delete(it)
+            s.commit()
+
+            # cargar nuevos ítems
+            for p in payload["items"]:
+                product_db = None
+                if p.get("codigo"):
+                    product_db = s.exec(select(Product).where(Product.codigo == p["codigo"])).first()
+
+                op = OrderProduct(
+                    codigo=p.get("codigo") or (product_db.codigo if product_db else "GENERIC"),
+                    order_id=order.id,
+                    product_id=product_db.id if product_db else None,
+                    nombre=p.get("nombre") or (product_db.nombre if product_db else ""),
+                    cantidad=int(p.get("cantidad", 1)),
+                    precio_unitario=float(p.get("precio_unitario", 0)),
+                )
+                s.add(op)
+
+        s.commit()
+        recompute_order_totals(s, order)
+
+        items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
+
+        return {"order": order, "productos": items}
 
 
+# -------------------------
+# LISTAR
+# -------------------------
 @app.get("/api/orders")
-def api_list_orders():
-    with get_session() as session:
-        return session.exec(select(Order)).all()
+def api_get_orders():
+    with get_session() as s:
+        return s.exec(select(Order)).all()
 
 
 @app.get("/api/orders/{order_id}")
 def api_get_order(order_id: int):
-    with get_session() as session:
-        order = session.get(Order, order_id)
+    with get_session() as s:
+        order = s.get(Order, order_id)
         if not order:
-            raise HTTPException(status_code=404, detail="Pedido no encontrado")
-        prods = session.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
-        return {"order": order, "productos": prods}
-@app.post("/api/products/{codigo}/upload-image")
-async def upload_image(
-    codigo: str,
-    file: UploadFile = File(...),
-    request: Request = None
-):
-    # Validar extensión
-    allowed = ["jpg", "jpeg", "png", "webp"]
-    ext = file.filename.split(".")[-1].lower()
-    if ext not in allowed:
-        raise HTTPException(400, "Formato inválido")
+            raise HTTPException(404)
 
-    # Buscar producto
-    with get_session() as session:
-        product = session.exec(select(Product).where(Product.codigo == codigo)).first()
-        if not product:
-            raise HTTPException(404, "Producto no encontrado")
-
-        # Guardar archivo
-        filename = f"{codigo}.{ext}"
-        save_path = os.path.join(IMAGES_DIR, filename)
-
-        with open(save_path, "wb") as f:
-            f.write(await file.read())
-
-        # Guardar URL en la BD
-        base_url = str(request.base_url).rstrip("/")
-        product.imagen_url = f"{base_url}/images/{filename}"
-
-        session.add(product)
-        session.commit()
-        session.refresh(product)
-
-        return {
-            "ok": True,
-            "imagen_url": product.imagen_url
-        }
-@app.get("/api/products/no-image", response_model=List[Product])
-def api_get_no_image():
-    with get_session() as session:
-        stmt = select(Product).where(
-            (Product.imagen_url == None) | (Product.imagen_url == "")
-        ).order_by(Product.orden.asc())
-        return session.exec(stmt).all()
+        items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order_id)).all()
+        return {"order": order, "productos": items}
 
 
-@app.post("/api/orders/{order_id}/items")
-def add_order_item(order_id: int, payload: dict):
-    """
-    payload: { "codigo": "...", "nombre": "...", "cantidad": 1, "precio_unitario": 100.0 }
-    """
-    with get_session() as session:
-        order = session.get(Order, order_id)
-        if not order:
-            raise HTTPException(404, "Pedido no encontrado")
-
-        # Si existe producto en DB con ese codigo, linkear product_id
-        product = None
-        product_id = None
-        if payload.get("codigo"):
-            product = session.exec(select(Product).where(Product.codigo == payload["codigo"])).first()
-            if product:
-                product_id = product.id
-
-        # crear OrderProduct (asumiendo modelo OrderProduct tiene campos: order_id, product_id(optional), nombre, cantidad, precio_unitario)
-        op = OrderProduct(
-            order_id = order_id,
-            product_id = product_id,
-            nombre = payload.get("nombre") or (product.nombre if product else ""),
-            cantidad = int(payload.get("cantidad",1)),
-            precio_unitario = float(payload.get("precio_unitario", 0.0))
-        )
-        session.add(op)
-        session.commit()
-        session.refresh(op)
-        return {"ok": True, "item": op}
-
-@app.put("/api/orders/{order_id}/items/{item_id}")
-def update_order_item(order_id: int, item_id: int, payload: dict):
-    with get_session() as session:
-        op = session.get(OrderProduct, item_id)
-        if not op or op.order_id != order_id:
-            raise HTTPException(404, "Item no encontrado")
-        # campos editables
-        if "cantidad" in payload: op.cantidad = int(payload["cantidad"])
-        if "precio_unitario" in payload: op.precio_unitario = float(payload["precio_unitario"])
-        if "nombre" in payload: op.nombre = payload["nombre"]
-        session.add(op)
-        session.commit()
-        session.refresh(op)
-        return {"ok": True, "item": op}
-
+# -------------------------
+# BORRAR ITEM
+# -------------------------
 @app.delete("/api/orders/{order_id}/items/{item_id}")
-def delete_order_item(order_id: int, item_id: int):
-    with get_session() as session:
-        op = session.get(OrderProduct, item_id)
+def api_delete_item(order_id: int, item_id: int):
+    with get_session() as s:
+        op = s.get(OrderProduct, item_id)
         if not op or op.order_id != order_id:
-            raise HTTPException(404, "Item no encontrado")
-        session.delete(op)
-        session.commit()
+            raise HTTPException(404)
+
+        s.delete(op)
+        s.commit()
+
+        order = s.get(Order, order_id)
+        recompute_order_totals(s, order)
+
         return {"ok": True}
+
+
 # -------------------------
 # BORRAR PEDIDO
 # -------------------------
 @app.delete("/api/orders/{order_id}")
 def api_delete_order(order_id: int):
-    with get_session() as session:
-        order = session.get(Order, order_id)
+    with get_session() as s:
+        order = s.get(Order, order_id)
         if not order:
-            raise HTTPException(status_code=404, detail="Pedido no encontrado")
-        # Borrar orderproducts asociados (si no hay cascade)
-        session.exec(select(OrderProduct).where(OrderProduct.order_id == order_id)).all()
-        # Si tu modelo tiene cascade, basta session.delete(order)
-        for op in session.exec(select(OrderProduct).where(OrderProduct.order_id == order_id)).all():
-            session.delete(op)
-        session.delete(order)
-        session.commit()
-        return {"ok": True, "deleted": order_id}
+            raise HTTPException(404)
 
-@app.post("/api/products/reset-order")
-def api_reset_order():
-    with get_session() as session:
-        products = session.exec(select(Product)).all()
-        for p in products:
-            p.orden = None   # o 0 si preferís
-            session.add(p)
-        session.commit()
-    return {"ok": True, "reset": len(products)}
+        items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order_id)).all()
+        for it in items:
+            s.delete(it)
+
+        s.delete(order)
+        s.commit()
+        return {"ok": True}
 
 
 # -------------------------
-# BUSCADOR DE PRODUCTOS (TYPEAHEAD)
+# ELIMINAR TODOS LOS PEDIDOS
 # -------------------------
-@app.get("/api/products/search", response_model=List[Product])
-def api_products_search(q: Optional[str] = None, limit: int = 20):
-    with get_session() as session:
-        if not q or q.strip() == "":
-            stmt = select(Product).order_by(Product.nombre).limit(limit)
-            return session.exec(stmt).all()
-        term = f"%{q.lower().strip()}%"
-        # SQLModel / SQLAlchemy: buscar por nombre o codigo (case-insensitive)
-        stmt = select(Product).where(
-            (Product.nombre.ilike(term)) | (Product.codigo.ilike(term))
-        ).order_by(Product.orden.asc()).limit(limit)
-        return session.exec(stmt).all()
+@app.delete("/api/orders/delete/all")
+def api_delete_all():
+    with get_session() as s:
+        s.exec("DELETE FROM orderproduct")
+        s.exec("DELETE FROM 'order'")
+        s.commit()
+        return {"ok": True, "message": "Todos los pedidos eliminados"}
 
+
+# -------------------------
+# IMPORTAR PEDIDOS DESDE EXCEL
+# -------------------------
 @app.post("/api/orders/import-excel")
 async def api_import_orders_excel(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith((".xlsx", ".xls")):
-        raise HTTPException(status_code=400, detail="Archivo debe ser Excel")
-
     content = await file.read()
     df = pd.read_excel(io.BytesIO(content), engine="openpyxl").fillna("")
 
     created = 0
     errors = []
 
-    with get_session() as session:
+    with get_session() as s:
         for idx, row in df.iterrows():
             try:
                 nombre = str(row.get("Nombre", "")).strip()
                 email = str(row.get("Email", "")).strip()
-
                 if not nombre:
                     errors.append(f"Fila {idx+1}: sin nombre")
                     continue
 
-                # Día entrega
                 dia_raw = row.get("dia de entrega", "")
                 try:
-                    dia_entrega = (
-                        pd.to_datetime(dia_raw).date()
-                        if dia_raw else None
-                    )
+                    dia_entrega = pd.to_datetime(dia_raw).date() if dia_raw else None
                 except:
                     dia_entrega = None
 
-                # TOTAL REAL
                 total_excel = (
-                    row.get("total") or
-                    row.get("Total") or
-                    row.get("Subtotal") or
-                    0
+                    row.get("total") or row.get("Total") or row.get("Subtotal") or 0
                 )
-
                 try:
                     total_excel = float(str(total_excel).replace("$", "").replace(".", "").replace(",", "."))
                 except:
@@ -557,23 +470,23 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                     dia_entrega=dia_entrega,
                     envio_cobrado=total_excel,
                     costo_envio_real=0,
-                    confirmado=str(row.get("confirmado y pagado","")).strip().upper() == "TRUE",
-                    entregado=str(row.get("entregado","")).strip().upper() == "TRUE"
+                    confirmado=str(row.get("confirmado y pagado", "")).strip().upper()=="TRUE",
+                    entregado=str(row.get("entregado", "")).strip().upper()=="TRUE",
                 )
 
-                session.add(order)
-                session.commit()
-                session.refresh(order)
+                s.add(order)
+                s.commit()
+                s.refresh(order)
 
-                # Agregar ITEM GENÉRICO
                 op = OrderProduct(
+                    codigo="GENERIC",
                     order_id=order.id,
                     nombre="PRODUCTO GENERICO",
                     cantidad=1,
                     precio_unitario=total_excel
                 )
-                session.add(op)
-                session.commit()
+                s.add(op)
+                s.commit()
 
                 created += 1
 
@@ -581,15 +494,3 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                 errors.append(f"Fila {idx+1}: {str(e)}")
 
     return {"created": created, "errors": errors}
-@app.delete("/api/orders/delete/all")
-def delete_all_orders():
-    with get_session() as session:
-        # 1) Borrar primero todos los OrderProduct
-        session.query(OrderProduct).delete()
-
-        # 2) Luego borrar todos los Order
-        session.query(Order).delete()
-
-        session.commit()
-
-        return {"ok": True, "message": "Todos los pedidos eliminados"}

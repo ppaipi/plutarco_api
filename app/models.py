@@ -27,6 +27,9 @@ class OrderProduct(SQLModel, table=True):
     cantidad: int = 1
     precio_unitario: float = 0.0
     subtotal: float = 0.0            # cantidad * precio_unitario
+def recompute_totals(self):
+    self.subtotal = sum((p.cantidad or 0) * (p.precio_unitario or 0) for p in self.productos)
+    self.total = self.subtotal + (self.envio_cobrado or 0)
 
 class Order(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

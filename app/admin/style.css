@@ -158,6 +158,39 @@ input[type=checkbox]{
   grid-template-columns:repeat(auto-fill,minmax(320px,1fr));
   gap:12px;
 }
+.row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.row label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.inp-order {
+  width: 60px !important;
+  padding: 6px 8px;
+}
+.inp-enabled {
+  transform: scale(1.1);
+}
+.thumb-button {
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  transition: 0.15s;
+}
+.thumb-button:hover {
+  background: var(--hover);
+}
 .product-card{
   display:flex;
   gap:12px;
@@ -174,6 +207,7 @@ input[type=checkbox]{
   box-shadow:var(--shadow);
 }
 
+
 .thumb{
   width:110px; height:110px;
   border-radius:10px;
@@ -182,13 +216,20 @@ input[type=checkbox]{
   background:var(--bg2);
 }
 .thumb img{ width:100%; height:100%; object-fit:cover; }
-
-.meta h4{
-  margin:0;
-  font-size:16px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+.meta {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.meta h4 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  height: 40px;
+  margin: 0;
 }
 .meta p{ margin:0; font-size:13px; color:var(--muted); }
 .order-card{
@@ -206,7 +247,23 @@ input[type=checkbox]{
 }
 
 .order-info{ font-size:14px; color:var(--muted); line-height:1.4; }
-.order-buttons{ margin-top:8px; display:flex; gap:8px; }
+.order-buttons {
+  display: flex;
+  gap: 6px;
+}
+.order-buttons button {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  cursor: pointer;
+  transition: 0.15s;
+  font-size: 15px;
+}
+.order-buttons button:hover {
+  background: var(--hover);
+}
 .modal{
   position:fixed;
   inset:0;
@@ -228,6 +285,22 @@ input[type=checkbox]{
   padding:20px;
   box-shadow:var(--shadow);
 }
+.modal-preview-wrapper{
+  max-width:100%;
+  max-height:400px;
+  overflow:auto;
+  border-radius:10px;
+  border:1px solid var(--input-border);
+  justify-content: center;
+}
+#modal-preview{
+  max-height:400px;
+  overflow:auto;
+  margin-top:10px;
+  border:1px solid var(--input-border);
+  border-radius:10px;
+}
+
 #items-table{
   width:100%;
   border-collapse:collapse;

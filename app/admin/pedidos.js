@@ -25,6 +25,8 @@ const fDireccion = document.getElementById("o-direccion");
 const fDia = document.getElementById("o-dia");
 const fEnvio = document.getElementById("o-envio");
 const fCostoEnvio = document.getElementById("o-costo-envio");
+const fTotal = document.getElementById("o-total"); // NUEVO
+const fComentario = document.getElementById("o-comentario"); // NUEVO
 const fConfirmado = document.getElementById("o-confirmado");
 const fEntregado = document.getElementById("o-entregado");
 
@@ -61,28 +63,51 @@ let typeaheadTimer = null;
 function toast(msg) { alert(msg) } // reemplazable por prettier toast
 
 // ===================== API helper =====================
-async function api(path, method='GET', body=null, isForm=false){
+async function api(path, method = "GET", body = null, isForm = false) {
   const headers = {};
-  const token = localStorage.getItem('token');
-  if(token) headers['x-api-key'] = token;
-  if(!isForm && body) headers['Content-Type'] = 'application/json';
-  const opts = { method, headers };
-  if(body) opts.body = isForm ? body : JSON.stringify(body);
-  const res = await fetch(path, opts);
-  if(!res.ok){
-    const txt = await res.text();
-    throw new Error(txt || res.status);
+  const token = localStorage.getItem("token");
+  if (token) headers["x-api-key"] = token;
+
+  // Siempre enviar JSON si no es FormData
+  if (!isForm) headers["Content-Type"] = "application/json";
+
+  const opts = {
+    method,
+    headers,
+  };
+
+  // Forzar a incluir body en POST/PUT aunque sea "{}"
+  if (method === "POST" || method === "PUT") {
+    if (isForm) opts.body = body;
+    else opts.body = body ? JSON.stringify(body) : "{}";
   }
-  if(res.status === 204) return null;
+
+  const res = await fetch(path, opts);
+
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(text || res.status);
+  }
+
+  if (res.status === 204) return null;
+
   return res.json();
 }
+
 
 // ===================== LOAD ORDERS =====================
 async function loadOrders(){
   try{
     const data = await api('/api/orders');
     // ensure date fields are strings
-    orders = data.map(o => ({ ...o, dia_entrega: o.dia_entrega ? o.dia_entrega.toString().slice(0,10) : null }));
+    orders = data.map(o => ({
+        ...o,
+        total: Number(o.total || 0),
+        envio_cobrado: Number(o.envio_cobrado || 0),
+        costo_envio_real: Number(o.costo_envio_real || 0),
+        subtotal: Number(o.subtotal || 0),
+        dia_entrega: o.dia_entrega ? o.dia_entrega.toString().slice(0,10) : null
+    }));    
     render();
   }catch(e){
     console.error(e);
@@ -140,7 +165,6 @@ function render() {
 
   // RENDER
   for (const o of slice) {
-    const total = Number(o.envio_cobrado || 0);
 
     const card = document.createElement('div');
     card.className = 'order-card';
@@ -153,7 +177,7 @@ function render() {
       <p class="small">${escapeHtml(o.correo || '')}</p>
       <p class="small">${escapeHtml(o.telefono || '')} • ${escapeHtml(o.direccion || '')}</p>
       <p class="small">Entrega: <b>${o.dia_entrega || '-'}</b></p>
-      <p class="small">Total: $${total}</p>
+      <p class="small">Total: $${Number(o.total || 0).toFixed(2)}</p>
 
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="btn small" data-id="${o.id}" data-action="edit">Ver / Editar</button>
@@ -198,6 +222,7 @@ btnNewOrder.addEventListener('click', ()=>{
   fDia.value = '';
   fEnvio.value = '';
   fCostoEnvio.value = '';
+  fComentario.value = '';
   fConfirmado.checked = false;
   fEntregado.checked = false;
   items = [];
@@ -216,6 +241,8 @@ async function openEdit(order){
   fDia.value = order.dia_entrega || '';
   fEnvio.value = order.envio_cobrado || 0;
   fCostoEnvio.value = order.costo_envio_real || 0;
+  fTotal.value = order.total || 0;
+  fComentario.value = order.comentario || '';
   fConfirmado.checked = !!order.confirmado;
   fEntregado.checked = !!order.entregado;
   btnDeleteOrder.style.display = 'inline-block';
@@ -246,6 +273,12 @@ function closeModalUI(){
   modal.style.display = 'none';
   modal.setAttribute('aria-hidden','true');
 }
+async function get_image_link(codigo){
+
+  const res = await api(`/api/products/by-codigo/${codigo}`);
+  if(res && res.image_url) return res.image_url;
+  else return 'placeholder.jpg';
+}
 
 // ===================== ITEMS TABLE =====================
 function renderItemsTable(){
@@ -256,6 +289,7 @@ function renderItemsTable(){
     subtotal += subtotalItem;
     const tr = document.createElement('tr');
     tr.innerHTML = `
+      <td><img src="${get_image_link(it.codigo)}" alt="Imagen" style="width:50px;height:50px;object-fit:cover;border:1px solid #ccc;"></td>
       <td><input class="input" data-idx="${idx}" data-field="codigo" value="${escapeHtml(it.codigo||'')}"></td>
       <td><input class="input" data-idx="${idx}" data-field="nombre" value="${escapeHtml(it.nombre||'')}"></td>
       <td><input class="input" data-idx="${idx}" data-field="cantidad" type="number" style="width:80px" value="${it.cantidad||1}"></td>
@@ -396,54 +430,42 @@ modalSave.addEventListener('click', async ()=>{
     dia_entrega: fDia.value || null,
     envio_cobrado: Number(fEnvio.value) || 0,
     costo_envio_real: Number(fCostoEnvio.value) || 0,
+    comentario: fComentario.value || '',
     confirmado: Boolean(fConfirmado.checked),
     entregado: Boolean(fEntregado.checked),
   };
 
   try{
-    if(editingOrderId){
-      await api(`/api/orders/${editingOrderId}`, 'PUT', payload);
+if (editingOrderId) {
+    const fullPayload = {
+        ...payload,
+        items: items.map(it => ({
+            codigo: it.codigo || "",
+            nombre: it.nombre || "",
+            cantidad: Number(it.cantidad || 1),
+            precio_unitario: Number(it.precio_unitario || 0)
+        }))
+    };
 
-      // sync items: update existing, create new, delete removed
-      const server = await api(`/api/orders/${editingOrderId}`);
-      const serverItemIds = (server.productos || []).map(i=>i.id);
+    await api(`/api/orders/${editingOrderId}`, 'PUT', fullPayload);
 
-      // update/create
-      for(const it of items){
-        if(it.id){
-          await api(`/api/orders/${editingOrderId}/items/${it.id}`, 'PUT', {
-            nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario
-          });
-        } else {
-          await api(`/api/orders/${editingOrderId}/items`, 'POST', {
-            codigo: it.codigo, nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario
-          });
-        }
-      }
-      // delete removed
-      const keptIds = items.filter(i=>i.id).map(i=>i.id);
-      const toDelete = (server.productos || []).filter(si => !keptIds.includes(si.id));
-      for(const td of toDelete){
-        await api(`/api/orders/${editingOrderId}/items/${td.id}`, 'DELETE');
-      }
+    toast('Pedido actualizado');
+} else {
+    const newPayload = {
+        ...payload,
+        items: items.map(it => ({
+            codigo: it.codigo || "",
+            nombre: it.nombre || "",
+            cantidad: Number(it.cantidad || 1),
+            precio_unitario: Number(it.precio_unitario || 0)
+        }))
+    };
 
-      toast('Pedido actualizado');
-    } else {
-      // create order first
-      const newOrderResp = await api('/api/orders', 'POST', { ...payload, productos: [] });
-      const newOrderId = newOrderResp.order?.id || newOrderResp.order || newOrderResp.id || null;
-      if(!newOrderId) {
-        throw new Error('No se pudo obtener ID del nuevo pedido (revisá la respuesta del backend).');
-      }
-      for(const it of items){
-        await api(`/api/orders/${newOrderId}/items`, 'POST', {
-          codigo: it.codigo, nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario
-        });
-      }
-      toast('Pedido creado');
-    }
-    closeModalUI();
-    await loadOrders();
+    const newOrder = await api('/api/orders', 'POST', newPayload);
+    toast('Pedido creado');
+}
+
+
   }catch(e){
     console.error(e);
     alert('Error guardando pedido: ' + (e.message||e));

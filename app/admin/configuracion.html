@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Configuración — Panel Admin Plutarco</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/configuracion.style.css">
+</head>
+<body>
+<div id="app">
+<header class="topbar">
+  <div class="brand">Plutarco <span class="muted">— Configuración</span></div>
+  <div class="actions">
+    <button id="theme-toggle" class="btn small ghost">🌙</button>
+    <a href="/productos" class="btn small">Productos</a>
+    <a href="/pedidos" class="btn small">Pedidos</a>
+    <button id="btn-logout" class="btn ghost">Salir</button>
+  </div>
+</header>
+<main class="container">
+
+  <section class="card card-section">
+    <h2>Envío — Tarifas por km</h2>
+    <div>
+      <table class="tariffs-table" id="tariffs-table">
+        <thead><tr><th>Km</th><th>Precio (ARS)</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div style="margin-top:8px">
+        <button id="btn-add-tariff" class="small-btn">+ Añadir fila</button>
+      </div>
+      <div style="margin-top:10px">
+        <label>Pedido mínimo</label>
+        <input id="config-min-order-amount" type="number" class="input" step="0.01" min="0">
+      </div>
+      <div id="config-msg" class="msg"></div>
+    </div>
+  </section>
+  <section class="card card-section">
+    <h2>Días de Entrega y Hora de Corte</h2>
+    <div class="days-list" id="days-list">
+      <!-- JS rellenará 7 filas (Domingo..Sábado) con checkbox y time input -->
+    </div>
+    <div id="delivery-days-msg" class="msg"></div>
+  </section>
+  <section class="card card-section">
+    <h2>Orden de Categorías y Subcategorías</h2>
+    
+    <div class="order-section">
+      <div class="order-subsection">
+        <h3>Categorías</h3>
+        <div class="selector-wrapper">
+          <input id="config-category-input" list="categories-list" class="input selector-input" placeholder="Selecciona o escribe una categoría">
+          <datalist id="categories-list"></datalist>
+          <button id="btn-add-category" class="btn small">+ Añadir</button>
+        </div>
+        <div id="category-tags" class="tags-display"></div>
+        <input id="config-category-order" type="hidden">
+        <div id="category-order-msg" class="msg"></div>
+      </div>
+
+      <div class="order-subsection">
+        <h3>Subcategorías</h3>
+        <div class="selector-wrapper">
+          <input id="config-subcategory-input" list="subcategories-list" class="input selector-input" placeholder="Selecciona o escribe una subcategoría">
+          <datalist id="subcategories-list"></datalist>
+          <button id="btn-add-subcategory" class="btn small">+ Añadir</button>
+        </div>
+        <div id="subcategory-tags" class="tags-display"></div>
+        <input id="config-subcategory-order" type="hidden">
+        <div id="subcategory-order-msg" class="msg"></div>
+      </div>
+    </div>
+  </section>
+
+  <button id="btn-save-all-config" class="btn primary">💾 Guardar Todas las Configuraciones</button>
+</main>
+<script src="/static/configuracion.js"></script>
+</html>

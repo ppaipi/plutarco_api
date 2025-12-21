@@ -12,7 +12,6 @@ primary_region = 'gru'
   auto_start_machines = true
   min_machines_running = 0
   processes = ['app']
-  hostname = "api.plutarcoalmacen.com.ar"
 
 [[vm]]
   memory = '1gb'
@@ -23,3 +22,11 @@ primary_region = 'gru'
 [mounts]
   source="data"
   destination="/data"
+  
+[experimental]
+  auto_rollbacks = true
+
+[[statics]]
+  guest_path = "/static"
+  url_prefix = "/static"
+  cache_control = "no-cache, no-store, must-revalidate"

@@ -258,3 +258,15 @@ def list_orders(session):
 
 def get_order(session, order_id: int):
     return session.get(Order, order_id)
+
+def get_options(session):
+    # obtener opciones como dias de entrega, orden de categorias, precio de envio
+    from .models import ConfiguracionDias, ConfiguracionCategorias, ConfiguracionEnvio
+    dias = session.exec(select(ConfiguracionDias)).all()
+    orden_cats = session.exec(select(ConfiguracionCategorias)).first()
+    precio_envio = session.exec(select(ConfiguracionEnvio)).first()
+    return {
+        "dias_entrega": dias,
+        "orden_categorias": orden_cats,
+        "config_envio": precio_envio
+    }

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>Panel Admin — Plutarco</title>
-  <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
 <div id="app">
@@ -12,6 +12,7 @@
   <div class="brand">Plutarco <span class="muted">— Admin</span></div>
   <div class="actions">
     <button id="theme-toggle" class="btn small ghost" title="Cambiar tema">🌙</button>
+        <a href="/configuracion" class="btn small">Configuración</a>
       <a href="/pedidos" class="btn small">Pedidos</a>
     <button id="btn-logout" class="btn ghost" hidden>Salir</button>
   </div>
@@ -117,6 +118,7 @@
     <div class="modal-actions">
       <button id="modal-upload" class="btn primary">Subir y reemplazar</button>
       <button id="modal-close" class="btn ghost">Cancelar</button>
+      <button id="modal-delete" class="btn primary-red">Eliminar imagen</button>
     </div>
 
   </div>
@@ -124,6 +126,6 @@
 
 
 </div>
-<script src="panel.js"></script>
+<script src="/static/productos.js?v=5"></script>
 </body>
 </html>

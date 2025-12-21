@@ -2,6 +2,8 @@
 from typing import List, Optional
 from sqlmodel import SQLModel, Field, Relationship
 from datetime import date
+from sqlalchemy import Column
+from sqlalchemy import JSON as SA_JSON
 
 class Product(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -47,3 +49,16 @@ class Order(SQLModel, table=True):
     entregado: bool = False
 
     productos: List[OrderProduct] = Relationship(sa_relationship_kwargs={"cascade":"all, delete-orphan"})
+
+
+# Moldelo: Dias: [1,3,5], Horas: [1, 10; 3, 12; 5, 14]
+class Configuracion(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    # Guardamos la configuración en campos JSON para estructuras complejas
+    # envio_tarifas: lista de objetos {km: number, price: number}
+    envio_tarifas: Optional[list] = Field(default_factory=list, sa_column=Column(SA_JSON))
+    # dias_entrega: lista de objetos {weekday: 0..6, cutoff: "HH:MM"}
+    dias_entrega: Optional[list] = Field(default_factory=list, sa_column=Column(SA_JSON))
+    orden_categorias: Optional[list] = Field(default_factory=list, sa_column=Column(SA_JSON))
+    orden_subcategorias: Optional[list] = Field(default_factory=list, sa_column=Column(SA_JSON))
+    pedido_minimo: Optional[float] = Field(default=0.0)  # Monto mínimo de pedido

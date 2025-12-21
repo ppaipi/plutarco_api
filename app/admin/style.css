@@ -132,6 +132,11 @@ input[type=checkbox]{
   color:#fff;
   border:none;
 }
+.btn.primary-red{
+  background-color: red;
+  color:#fff;
+  border:none;
+}
 .btn.primary:hover{ transform:translateY(-1px); }
 
 .btn.danger{

@@ -1,8 +1,8 @@
 /* panel.js - Panel Admin Plutarco (Next-level)
    Requisitos backend:
-   - POST /api/admin/login (form-urlencoded) -> { access_token }
-   - GET  /api/products (ordenados por orden en backend)
-   - PUT  /api/products/{id}/order  Body: { orden: int }
+   - POST /login (form-urlencoded) -> { access_token }
+   - GET  /products (ordenados por orden en backend)
+   - PUT  /products/{id}/order  Body: { orden: int }
    - PUT  /products/{id}/state       Body: { habilitado: bool }  <-- existing
    - POST /products/{codigo}/upload-image  (FormData file)
    - POST /products/import (FormData file)
@@ -18,6 +18,7 @@ let products = [];
 let visibleCount = 50;
 const PAGE_STEP = 50;
 let currentEditCodigo = null;
+let currentImgLink = null;
 
 // DOM
 const loginScreen = document.getElementById("login-screen");
@@ -36,6 +37,7 @@ const loadMoreBtn = document.getElementById("btn-load-more");
 const modal = document.getElementById("modal");
 const modalPreview = document.getElementById("modal-preview");
 const modalFile = document.getElementById("modal-file");
+const modalDelete = document.getElementById("modal-delete");
 const modalUpload = document.getElementById("modal-upload");
 const modalClose = document.getElementById("modal-close");
 
@@ -72,57 +74,39 @@ function setToken(t){
 }
 
 // show/hide screens
-function showLogin(){ loginScreen.classList.remove("hidden"); dashboard.classList.add("hidden"); btnLogout.hidden = true }
+function showLogin(){ window.location.href = '/login'; }
 function showDashboard(){ loginScreen.classList.add("hidden"); dashboard.classList.remove("hidden"); btnLogout.hidden = false }
 
-// api helper
-async function api(path, method="GET", body=null, isForm=false){
-  const headers = {};
-  if(token) headers['x-api-key'] = token;
-  if(!isForm && body) headers['Content-Type'] = 'application/json';
-  const opts = { method, headers };
-  if(body) opts.body = isForm ? body : JSON.stringify(body);
-  const res = await fetch(API_BASE + path, opts);
-  if(!res.ok){
-    const txt = await res.text();
-    throw new Error(txt || res.status);
-  }
-  if(res.status === 204) return null;
-  return res.json();
-}
+const API_URL = "https://api.plutarcoalmacen.com.ar/";
 
-/* ------------------ LOGIN ------------------ */
-btnLogin.addEventListener('click', async ()=>{
-  loginMsg.textContent = '';
-  const user = document.getElementById('login-user').value.trim();
-  const pass = document.getElementById('login-pass').value.trim();
-  if(!user || !pass){ loginMsg.textContent = 'Completá usuario y contraseña'; return; }
-  try{
-    const form = new URLSearchParams();
-    form.append('username', user); form.append('password', pass);
-    const r = await fetch(API_BASE + '/api/admin/login', { method: 'POST', body: form });
-    if(!r.ok) throw new Error('Login failed');
-    const data = await r.json();
-    setToken(data.access_token);
-    showDashboard();
-    await loadProducts(true);
-  }catch(e){
-    console.error(e);
-    loginMsg.textContent = 'Credenciales incorrectas';
-  }
-});
-
+// Logout
 btnLogout.addEventListener('click', ()=>{
   setToken(null);
-  showLogin();
+  window.location.href = '/login';
 });
 
 /* ------------------ PRODUCTS ------------------ */
 async function loadProducts(force=false){
   try{
     statsEl.textContent = 'Cargando productos...';
-    const all = await api('/api/products'); // backend returns ordered by orden
-    products = all || [];
+
+    const headers = {};
+    if(token) headers['x-api-key'] = token;
+
+    // SIEMPRE usa API_URL con la barra final
+    const res = await fetch(API_URL + "products/", {
+      method: "GET",
+      headers,
+    });
+
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(txt || res.status);
+    }
+
+    const all = res.status === 204 ? [] : await res.json();
+
+    products = all;
     populateCategories();
     visibleCount = PAGE_STEP;
     renderFiltered();
@@ -132,6 +116,7 @@ async function loadProducts(force=false){
     statsEl.textContent = 'Error cargando productos';
   }
 }
+
 
 function populateCategories(){
   const cats = Array.from(new Set(products.map(p => (p.categoria||'').trim()).filter(Boolean)));
@@ -187,12 +172,12 @@ function renderList(list) {
     div.dataset.id = p.id;
     div.dataset.index = idx;
 
-    const imagen = p.imagen_url ? p.imagen_url : 'placeholder.jpg';
+    const imagen = p.imagen_url ? p.imagen_url : '/static/placeholder.jpg';
 
     div.innerHTML = `
       <div class="thumb">
         <img src="${escapeHtml(imagen)}" alt="${escapeHtml(p.nombre)}"
-        onerror="this.src='placeholder.jpg'">
+        onerror="this.src='/static/placeholder.jpg'">
       </div>
 
       <div class="meta">
@@ -223,7 +208,21 @@ function renderList(list) {
   div.querySelector('.inp-order').addEventListener('change', async (ev) => {
     const v = Number(ev.target.value) || 0;
     try {
-      await api(`/api/products/${p.id}/order`, 'PUT', { orden: v });
+      // PUT directo para actualizar orden
+      {
+        const path = `/products/${p.id}/order`; // sin slash final
+        const headers = {};
+        if(token) headers['x-api-key'] = token;
+        headers['Content-Type'] = 'application/json';
+        const opts = { method: 'PUT', headers, body: JSON.stringify({ orden: v }) };
+        const res = await fetch(API_URL + path, opts);
+        if(!res.ok){
+          const txt = await res.text();
+          throw new Error(txt || res.status);
+        }
+        if(res.status !== 204) await res.json();
+      }
+
       p.orden = v;
 
       if (!suppressOrderReload) {
@@ -241,7 +240,8 @@ function renderList(list) {
     // MODAL IMAGEN
     div.querySelector('.btn-img').addEventListener('click', () => {
       currentEditCodigo = p.codigo;
-      modalPreview.src = p.imagen_url ? p.imagen_url : 'placeholder.jpg';
+      currentImgLink = p.imagen_url || null;
+      modalPreview.src = p.imagen_url ? p.imagen_url : '/static/placeholder.jpg';
       modalFile.value = '';
       modal.setAttribute('aria-hidden', 'false');
     });
@@ -286,13 +286,21 @@ async function moveProduct(productId, direction) {
 
   try {
     // GUARDA SOLO LOS DOS QUE CAMBIARON
-    await api(`/api/products/${sorted[index].id}/order`, 'PUT', {
-      orden: sorted[index].orden
-    });
+    {
+      const pathA = `/products/${sorted[index].id}/order`; // sin slash final
+      const headersA = {}; if(token) headersA['x-api-key'] = token; headersA['Content-Type'] = 'application/json';
+      const optsA = { method: 'PUT', headers: headersA, body: JSON.stringify({ orden: sorted[index].orden }) };
+      const resA = await fetch(API_URL + pathA, optsA);
+      if(!resA.ok){ const txt = await resA.text(); throw new Error(txt || resA.status); }
+    }
 
-    await api(`/api/products/${sorted[newIndex].id}/order`, 'PUT', {
-      orden: sorted[newIndex].orden
-    });
+    {
+      const pathB = `/products/${sorted[newIndex].id}/order`; // sin slash final
+      const headersB = {}; if(token) headersB['x-api-key'] = token; headersB['Content-Type'] = 'application/json';
+      const optsB = { method: 'PUT', headers: headersB, body: JSON.stringify({ orden: sorted[newIndex].orden }) };
+      const resB = await fetch(API_URL + pathB, optsB);
+      if(!resB.ok){ const txt = await resB.text(); throw new Error(txt || resB.status); }
+    }
 
     // recargar una sola vez
     await loadProducts(true);
@@ -320,20 +328,65 @@ modalUpload.addEventListener('click', async ()=>{
   if(!['jpg','jpeg','png','webp'].includes(ext)){ alert('Formato inválido'); return; }
   const fd = new FormData(); fd.append('file', f);
   try{
-    await api(`/products/${currentEditCodigo}/upload-image`, 'POST', fd, true);
+    // POST FormData directo (sin Content-Type)
+    {
+      const path = `images/upload/${currentEditCodigo}/`; // sin slash final
+      const headers = {};
+      if(token) headers['x-api-key'] = token;
+      const opts = { method: 'POST', headers, body: fd };
+      const res = await fetch(API_URL + path, opts);
+      if(!res.ok){
+        const txt = await res.text();
+        throw new Error(txt || res.status);
+      }
+      if(res.status !== 204) await res.json();
+    }
+
     modal.setAttribute('aria-hidden','true');
     await loadProducts(true);
     alert('Imagen subida correctamente');
   }catch(err){ console.error(err); alert('Error subiendo imagen'); }
 });
+modalDelete.addEventListener('click', async ()=>{
+  if(!confirm('¿Eliminar imagen del producto?')) return;
+  if(!currentImgLink){ alert('El producto no tiene imagen'); return; }
+  if(currentImgLink[0] === '/') currentImgLink = currentImgLink.slice(1);
+  try{
+    // DELETE imagen
+    {
+      const path = `${currentImgLink}`; // sin slash final
+      const headers = {};
+      if(token) headers['x-api-key'] = token;
+      const opts = { method: 'DELETE', headers };
+      const res = await fetch(API_URL + path, opts);
+      if(!res.ok){
+        const txt = await res.text();
+        throw new Error(txt || res.status);
+      }
+    }
 
+    modal.setAttribute('aria-hidden','true');
+    await loadProducts(true);
+    alert('Imagen eliminada correctamente');
+  }catch(err){ console.error(err); alert('Error eliminando imagen'); }
+});
 /* ------------------ IMPORTERS ------------------ */
 btnUploadExcel.addEventListener('click', ()=> fileExcel.click());
 fileExcel.addEventListener('change', async (e)=>{
   const f = e.target.files[0]; if(!f) return;
   const fd = new FormData(); fd.append('file', f);
   try{
-    const r = await api('/api/products/import', 'POST', fd, true);
+    // POST FormData para import
+    {
+      const path = '/products/import'; // sin slash final
+      const headers = {};
+      if(token) headers['x-api-key'] = token;
+      const opts = { method: 'POST', headers, body: fd };
+      const res = await fetch(API_URL + path, opts);
+      if(!res.ok){ const txt = await res.text(); throw new Error(txt || res.status); }
+      var r = res.status === 204 ? null : await res.json();
+    }
+
     alert(`Import: ${r.created} creados, ${r.updated} actualizados, ${r.skipped} saltados`);
     await loadProducts(true);
   }catch(err){ console.error(err); alert('Error importando Excel') }
@@ -344,7 +397,15 @@ fileJson.addEventListener('change', async (e)=>{
   const f = e.target.files[0]; if(!f) return;
   const fd = new FormData(); fd.append('file', f);
   try{
-    await api('/api/products/import-habilitados', 'POST', fd, true);
+    {
+      const path = '/products/import-habilitados'; // sin slash final
+      const headers = {}; if(token) headers['x-api-key'] = token;
+      const opts = { method: 'POST', headers, body: fd };
+      const res = await fetch(API_URL + path, opts);
+      if(!res.ok){ const txt = await res.text(); throw new Error(txt || res.status); }
+      if(res.status !== 204) await res.json();
+    }
+
     alert('Habilitados importados');
     await loadProducts(true);
   }catch(err){ console.error(err); alert('Error importando JSON') }
@@ -355,7 +416,15 @@ fileCsv.addEventListener('change', async (e)=>{
   const f = e.target.files[0]; if(!f) return;
   const fd = new FormData(); fd.append('file', f);
   try{
-    await api('/api/products/import-ordenes', 'POST', fd, true);
+    {
+      const path = '/products/import-ordenes'; // sin slash final
+      const headers = {}; if(token) headers['x-api-key'] = token;
+      const opts = { method: 'POST', headers, body: fd };
+      const res = await fetch(API_URL + path, opts);
+      if(!res.ok){ const txt = await res.text(); throw new Error(txt || res.status); }
+      if(res.status !== 204) await res.json();
+    }
+
     alert('Ordenes importadas');
     await loadProducts(true);
   }catch(err){ console.error(err); alert('Error importando CSV') }
@@ -366,4 +435,5 @@ loadMoreBtn.addEventListener('click', ()=> { visibleCount += PAGE_STEP; renderFi
 
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-if(token){ showDashboard(); loadProducts(true); } else showLogin();
+// Check token on init - rediijo a login si no hay token
+if(token){ showDashboard(); loadProducts(true); } else { window.location.href = API_URL + 'login/'; }

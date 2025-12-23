@@ -1,6 +1,7 @@
-from fastapi import status, APIRouter, HTTPException, Query
+from fastapi import status, APIRouter, HTTPException, Query, Body
 from fastapi import Form, UploadFile, File
 from typing import List, Optional
+from pydantic import BaseModel
 from app.models import Product
 from sqlmodel import select
 from app.database import get_session
@@ -9,8 +10,26 @@ import io
 from app.crud import (
     get_product_by_codigo,
     update_or_create_product_by_data,
-    set_product_habilitado,
+    toggle_product_habilitado,
 )
+
+def parse_precio(valor):
+    # adaptalo a tu formato: si viene "1.234,56" o "1234.56"
+    try:
+        if isinstance(valor, str):
+            # quitar puntos miles y reemplazar coma decimal
+            v = valor.replace(".", "").replace(",", ".")
+            return float(v)
+        return float(valor)
+    except:
+        return 0.0
+
+# ===================== MODELOS PYDANTIC =====================
+class SetStatePayload(BaseModel):
+    habilitado: bool
+
+class SetOrderPayload(BaseModel):
+    orden: int
 
 # Router con prefix correcto
 router = APIRouter(prefix="/products", tags=["products"])
@@ -69,7 +88,9 @@ async def import_products(file: UploadFile = File(...)):
                 "nombre": nombre,
                 "categoria": str(row.get("RUBRO", "")),
                 "subcategoria": str(row.get("SUBRUBRO", "")),
-                "precio": float(row.get("PRECIO VENTA C/IVA", 0)),
+                "precio": parse_precio(row.get("PRECIO VENTA C/IVA")),
+                "descripcion": str(row.get("DESCRIPCION ADICIONAL", "")),
+                "proveedor": str(row.get("PROVEEDOR", "")),
             }
 
             existing = session.exec(
@@ -87,14 +108,11 @@ async def import_products(file: UploadFile = File(...)):
 # PRODUCTOS – ESTADO
 # -------------------------
 @router.put("/{product_id}/state")
-def api_set_state(product_id: int, payload: dict):
-    if "habilitado" not in payload:
-        raise HTTPException(400, "Falta habilitado")
-
+def api_set_state(product_id: int, payload: SetStatePayload):
     with get_session() as s:
-        prod = set_product_habilitado(s, product_id, payload["habilitado"])
+        prod = toggle_product_habilitado(s, product_id=product_id, habilitado=payload.habilitado)
         if not prod:
-            raise HTTPException(404)
+            raise HTTPException(404, "Producto no encontrado")
         return {"ok": True}
 
 
@@ -102,16 +120,14 @@ def api_set_state(product_id: int, payload: dict):
 # SET ORDEN
 # -------------------------
 @router.put("/{product_id}/order")
-def api_set_order(product_id: int, payload: dict):
-    if "orden" not in payload:
-        raise HTTPException(400, "Falta orden")
-
+def api_set_order(product_id: int, payload: SetOrderPayload):
     with get_session() as s:
         prod = s.get(Product, product_id)
         if not prod:
-            raise HTTPException(404)
+            raise HTTPException(404, "Producto no encontrado")
 
-        prod.orden = payload["orden"]
+        prod.orden = payload.orden
+        s.add(prod)
         s.commit()
         s.refresh(prod)
 

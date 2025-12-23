@@ -235,6 +235,32 @@ function renderList(list) {
     }
   });
 
+  // CAMBIAR ESTADO HABILITADO con checkbox
+  div.querySelector('.inp-enabled').addEventListener('change', async (ev) => {
+    const isEnabled = ev.target.checked;
+    try {
+      const path = `products/${p.id}/state`; // sin slash final
+      const headers = {};
+      if(token) headers['x-api-key'] = token;
+      headers['Content-Type'] = 'application/json';
+      const opts = { method: 'PUT', headers, body: JSON.stringify({ habilitado: isEnabled }) };
+      const res = await fetch(API_URL + path, opts);
+      if(!res.ok){
+        const txt = await res.text();
+        throw new Error(txt || res.status);
+      }
+      if(res.status !== 204) await res.json();
+
+      // actualizar en memoria
+      p.habilitado = isEnabled;
+
+    } catch (err) {
+      alert('No se pudo actualizar estado');
+      console.error(err);
+      ev.target.checked = !isEnabled; // revertir checkbox si hay error
+    }
+  });
+
 
 
     // MODAL IMAGEN
@@ -259,7 +285,9 @@ function renderList(list) {
     listEl.appendChild(div);
   });
 }
-
+/* @router.put("/{product_id}/state")
+def api_set_state(product_id: int, payload: dict):
+ */
 async function moveProduct(productId, direction) {
   // SIEMPRE trabajar sobre una lista ordenada real (no sobre products)
   const sorted = [...products].sort((a, b) => 
@@ -378,7 +406,7 @@ fileExcel.addEventListener('change', async (e)=>{
   try{
     // POST FormData para import
     {
-      const path = '/products/import'; // sin slash final
+      const path = 'products/import'; // sin slash final
       const headers = {};
       if(token) headers['x-api-key'] = token;
       const opts = { method: 'POST', headers, body: fd };

@@ -77,7 +77,7 @@ def update_or_create_product_by_data(session, data: dict):
             subcategoria = data.get("subcategoria",""),
             precio = float(data.get("precio", 0.0)),
             proveedor = data.get("proveedor",""),
-            habilitado = data.get("habilitado", True),  # por defecto true si se crea
+            habilitado = data.get("habilitado", False),  # por defecto true si se crea
             orden = data.get("orden", None)
         )
         session.add(p)
@@ -85,7 +85,7 @@ def update_or_create_product_by_data(session, data: dict):
         session.refresh(p)
         return p
 
-def set_product_habilitado(session, product_id: int = None, codigo: str = None, habilitado: bool = True):
+def toggle_product_habilitado(session, product_id: int = None, codigo: str = None, habilitado: bool = None):
     """
     Actualiza el campo habilitado de un producto identificado por id o codigo.
     """
@@ -96,7 +96,8 @@ def set_product_habilitado(session, product_id: int = None, codigo: str = None, 
         prod = get_product_by_codigo(session, codigo)
     if not prod:
         return None
-    prod.habilitado = bool(habilitado)
+    if habilitado is not None:
+        prod.habilitado = bool(habilitado)
     session.add(prod)
     session.commit()
     session.refresh(prod)

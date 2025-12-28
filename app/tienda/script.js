@@ -134,7 +134,7 @@ div.innerHTML = `
     alt="${prod.Nombre}" 
     loading="lazy"
     style="object-fit: cover;"
-    onerror="this.src='/media/placeholder.jpg'";"
+    onerror="this.src='/media_static/placeholder.jpg'";"
   >
 
   <h3>${prod.Nombre}</h3>
@@ -656,7 +656,7 @@ function updateCart() {
           class="thumb"
           src="${escapeHtml(producto.Imagen)}"
           alt="${producto.Nombre}" 
-          onerror="this.onerror=null; this.src='/media/placeholder.jpg';"
+          onerror="this.onerror=null; this.src='/media_static/placeholder.jpg';"
           width="80" height="80"
           style="object-fit: cover;">
         <div>
@@ -1247,7 +1247,7 @@ function crearModalDescripcion(prod) {
   img.alt = prod.Nombre;
   img.onerror = function() {
     this.onerror = null;
-    this.src = '/media/placeholder.jpg';
+    this.src = '/media_static/placeholder.jpg';
   };
   img.onclick = () => {
     toggleZoom(img.id);

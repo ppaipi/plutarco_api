@@ -295,7 +295,7 @@ function closeModalUI(){
 }
 
 async function get_image_link(codigo){
-  if (!codigo) return '/media/placeholder.jpg';
+  if (!codigo) return '/media_static/placeholder.jpg';
   try{
     const res = await (async ()=>{
       const path = `products/by-codigo/${encodeURIComponent(codigo)}`;
@@ -310,9 +310,9 @@ async function get_image_link(codigo){
       return r.status === 204 ? null : await r.json();
     })();
     if(res && res.imagen_url) return res.imagen_url;
-    return '/media/placeholder.jpg';
+    return '/media_static/placeholder.jpg';
   }catch(err){
-    return '/media/placeholder.jpg';
+    return '/media_static/placeholder.jpg';
   }
 }
 
@@ -334,7 +334,7 @@ async function renderItemsTable(){
     const imgId = `item-img-${idx}-${Date.now()}`;
 
     tr.innerHTML = `
-      <td><img id="${imgId}" src="/media/placeholder.jpg" alt="Imagen" style="width:50px;height:50px;object-fit:cover;"></td>
+      <td><img id="${imgId}" src="/media_static/placeholder.jpg" alt="Imagen" style="width:50px;height:50px;object-fit:cover;"></td>
       <td><input class="input" data-idx="${idx}" data-field="codigo" value="${escapeHtml(it.codigo||'')}"></td>
       <td><input class="input" data-idx="${idx}" data-field="nombre" value="${escapeHtml(it.nombre||'')}"></td>
       <td><input class="input" data-idx="${idx}" data-field="cantidad" type="number" style="width:80px" value="${it.cantidad||1}"></td>

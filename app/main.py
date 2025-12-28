@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.database import init_db
 from app.routes import api_router
 from app.config import API_KEY, PROTECTED_PATHS, PUBLIC_PATHS
+from app.config import IMAGES_DIR
 
 
 # ===================== APP =====================
@@ -59,6 +60,13 @@ app.mount(
     "/media",
     StaticFiles(directory=MEDIA_DIR),
     name="media"
+)
+
+# Montar imágenes estáticas accesibles en /media_static (usa IMAGES_DIR)
+app.mount(
+    "/media_static",
+    StaticFiles(directory=IMAGES_DIR),
+    name="media_static"
 )
 
 

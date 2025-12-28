@@ -52,7 +52,7 @@ if (btnTheme) btnTheme.onclick = () => {
 };
 
 // Base API URL (usar absoluta para evitar redirecciones http/https)
-const API_URL = "https://api.plutarcoalmacen.com.ar/";
+const API_URL = "https://plutarco-api.fly.dev/";
 
 // Check token on init - redirect to login if not authenticated
 if (!localStorage.getItem('token')) {
@@ -81,7 +81,7 @@ async function loadOrders(){
     const token = localStorage.getItem('token');
     if (token) headers['x-api-key'] = token;
 
-    const res = await fetch(API_URL + "orders/", { method: 'GET', headers });
+    const res = await fetch(API_URL + "orders/list", { method: 'GET', headers });
     if(!res.ok){
       const txt = await res.text().catch(()=> '');
       throw new Error(txt || res.status);
@@ -131,10 +131,10 @@ function render() {
     if (state === 'confirmado' && !o.confirmado) return false;
     if (state === 'entregado' && !o.entregado) return false;
 
-    if (exactDate && o.dia_entrega !== exactDate) return false;
+    if (exactDate && o.dia_pedido !== exactDate) return false;
 
     if (monthFilter) {
-      const month = o.dia_entrega ? o.dia_entrega.slice(0,7) : '';
+      const month = o.dia_pedido ? o.dia_pedido.slice(0,7) : '';
       if (month !== monthFilter) return false;
     }
 
@@ -143,8 +143,8 @@ function render() {
 
   // ORDENACIÓN por fecha
   filtered.sort((a,b)=>{
-    const da = a.dia_entrega || '0000-00-00';
-    const db = b.dia_entrega || '0000-00-00';
+    const da = a.dia_pedido || '0000-00-00';
+    const db = b.dia_pedido || '0000-00-00';
     return sortDir === 'asc'
       ? da.localeCompare(db)
       : db.localeCompare(da);
@@ -170,7 +170,7 @@ function render() {
       </h3>
       <p class="small">${escapeHtml(o.correo || '')}</p>
       <p class="small">${escapeHtml(o.telefono || '')} • ${escapeHtml(o.direccion || '')}</p>
-      <p class="small">Entrega: <b>${o.dia_entrega || '-'}</b></p>
+      <p class="small">Pedido: <b>${o.dia_pedido || '-'}</b></p>
       <p class="small">Total: $${Number(o.total || 0).toFixed(2)}</p>
 
       <div style="display:flex;gap:8px;margin-top:8px">
@@ -198,7 +198,7 @@ async function confirmAndDelete(orderId){
   if(!confirm(`¿Eliminar pedido #${orderId}? Esta acción no se puede deshacer.`)) return;
   try{
     {
-      const path = `/orders/${orderId}`;
+      const path = `orders/${orderId}`;
       const headers = {};
       const token = localStorage.getItem('token');
       if (token) headers['x-api-key'] = token;
@@ -256,7 +256,7 @@ async function openEdit(order){
   try{
     // obtener pedido con fetch local usando buildApiUrl
     const r = await (async ()=>{
-      const path = `/orders/${order.id}`;
+      const path = `orders/${order.id}`;
       const headers = {};
       const token = localStorage.getItem('token');
       if (token) headers['x-api-key'] = token;
@@ -295,10 +295,10 @@ function closeModalUI(){
 }
 
 async function get_image_link(codigo){
-  if (!codigo) return '/static/placeholder.jpg';
+  if (!codigo) return '/media/placeholder.jpg';
   try{
     const res = await (async ()=>{
-      const path = `/products/by-codigo/${encodeURIComponent(codigo)}`;
+      const path = `products/by-codigo/${encodeURIComponent(codigo)}`;
       const headers = {};
       const token = localStorage.getItem('token');
       if (token) headers['x-api-key'] = token;
@@ -310,9 +310,9 @@ async function get_image_link(codigo){
       return r.status === 204 ? null : await r.json();
     })();
     if(res && res.imagen_url) return res.imagen_url;
-    return '/static/placeholder.jpg';
+    return '/media/placeholder.jpg';
   }catch(err){
-    return '/static/placeholder.jpg';
+    return '/media/placeholder.jpg';
   }
 }
 
@@ -334,7 +334,7 @@ async function renderItemsTable(){
     const imgId = `item-img-${idx}-${Date.now()}`;
 
     tr.innerHTML = `
-      <td><img id="${imgId}" src="/static/placeholder.jpg" alt="Imagen" style="width:50px;height:50px;object-fit:cover;"></td>
+      <td><img id="${imgId}" src="/media/placeholder.jpg" alt="Imagen" style="width:50px;height:50px;object-fit:cover;"></td>
       <td><input class="input" data-idx="${idx}" data-field="codigo" value="${escapeHtml(it.codigo||'')}"></td>
       <td><input class="input" data-idx="${idx}" data-field="nombre" value="${escapeHtml(it.nombre||'')}"></td>
       <td><input class="input" data-idx="${idx}" data-field="cantidad" type="number" style="width:80px" value="${it.cantidad||1}"></td>
@@ -401,7 +401,7 @@ if (productSearch) {
     typeaheadTimer = setTimeout(async ()=>{
       try{
         // prefer server search endpoint (fetch local)
-        const path = `/products/search?q=${encodeURIComponent(q)}&limit=12`;
+        const path = `products/search?q=${encodeURIComponent(q)}&limit=12`;
         const headers = {};
         const token = localStorage.getItem('token');
         if (token) headers['x-api-key'] = token;
@@ -610,8 +610,8 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
   const months = new Set();
 
   orders.forEach(o => {
-    if (o.dia_entrega) {
-      const m = o.dia_entrega.slice(0,7); // YYYY-MM
+    if (o.dia_pedido) {
+      const m = o.dia_pedido.slice(0,7); // YYYY-MM
       months.add(m);
     }
   });

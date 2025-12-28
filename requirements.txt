@@ -7,3 +7,5 @@ openpyxl
 python-multipart
 python-dotenv
 mysql-connector-python
+requests
+alembic

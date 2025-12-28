@@ -27,24 +27,26 @@ class OrderProduct(SQLModel, table=True):
     codigo: Optional[str] = ""        # guardamos también código y nombre por snapshot
     nombre: Optional[str] = ""
     cantidad: int = 1
-    precio_unitario: float = 0.0
-    subtotal: float = 0.0            # cantidad * precio_unitario
+    precio_unitario: int = 0
+    subtotal: int = 0            # cantidad * precio_unitario
+
 def recompute_totals(self):
     self.subtotal = sum((p.cantidad or 0) * (p.precio_unitario or 0) for p in self.productos)
     self.total = self.subtotal + (self.envio_cobrado or 0)
 
 class Order(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
+    dia_pedido: Optional[date] = None
     dia_entrega: Optional[date] = None
     nombre_completo: str
     correo: str
     telefono: Optional[str] = ""
     direccion: Optional[str] = ""
     comentario: Optional[str] = ""
-    subtotal: float = 0.0
-    envio_cobrado: float = 0.0
-    costo_envio_real: float = 0.0
-    total: float = 0.0
+    subtotal: int = 0
+    envio_cobrado: int = 0
+    costo_envio_real: int = 0
+    total: int = 0
     confirmado: bool = False
     entregado: bool = False
 

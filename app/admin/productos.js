@@ -172,12 +172,12 @@ function renderList(list) {
     div.dataset.id = p.id;
     div.dataset.index = idx;
 
-    const imagen = p.imagen_url ? p.imagen_url : '/static/placeholder.jpg';
+    const imagen = p.imagen_url ? p.imagen_url : '/media/placeholder.jpg';
 
     div.innerHTML = `
       <div class="thumb">
         <img src="${escapeHtml(imagen)}" alt="${escapeHtml(p.nombre)}"
-        onerror="this.src='/static/placeholder.jpg'">
+        onerror="this.src='/media/placeholder.jpg'">
       </div>
 
       <div class="meta">
@@ -267,7 +267,7 @@ function renderList(list) {
     div.querySelector('.btn-img').addEventListener('click', () => {
       currentEditCodigo = p.codigo;
       currentImgLink = p.imagen_url || null;
-      modalPreview.src = p.imagen_url ? p.imagen_url : '/static/placeholder.jpg';
+      modalPreview.src = p.imagen_url ? p.imagen_url : '/media/placeholder.jpg';
       modalFile.value = '';
       modal.setAttribute('aria-hidden', 'false');
     });

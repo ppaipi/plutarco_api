@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.database import init_db
 from app.routes import api_router
-from app.config import API_KEY, PROTECTED_PATHS
+from app.config import API_KEY, PROTECTED_PATHS, PUBLIC_PATHS
 
 
 # ===================== APP =====================
@@ -71,6 +71,9 @@ async def api_key_middleware(request: Request, call_next):
         return await call_next(request)
 
     path = request.url.path
+
+    if any(path.startswith(p) for p in PUBLIC_PATHS):
+        return await call_next(request)
 
     if any(path.startswith(p) for p in PROTECTED_PATHS):
         key = request.headers.get("x-api-key")

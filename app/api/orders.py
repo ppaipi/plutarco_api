@@ -5,12 +5,103 @@ from sqlmodel import select
 from app.database import get_session
 import pandas as pd
 import io
+import os
+import requests
 from sqlmodel import Session
 from fastapi import UploadFile, File
 
 
 
 router = APIRouter(prefix="/orders", tags=["orders"])
+
+
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+
+def enviar_mail(to: str, subject: str, html: str):
+    response = requests.post(
+        "https://api.resend.com/emails",
+        headers={
+            "Authorization": f"Bearer {RESEND_API_KEY}",
+            "Content-Type": "application/json"
+        },
+        json={
+            "from": "Plutarco Almacén - Pedidos <pedidos@plutarcoalmacen.com.ar>",
+            "to": [to],
+            "subject": subject,
+            "html": html
+        }
+    )
+
+    if response.status_code >= 400:
+        print("Error enviando mail:", response.text)
+        return False
+
+    return True
+
+def generar_html_pedido(order: Order) -> str:
+    productos_html = ""
+    for p in order.productos:
+        productos_html += f"""
+        <tr>
+            <td style="padding:6px;">{p.cantidad}</td>
+            <td style="padding:6px;">{p.nombre}</td>
+            <td style="padding:6px; text-align:right;">${(p.cantidad or 0) * (p.precio_unitario or 0):.2f}</td>
+        </tr>
+        """
+    html = f"""
+    <div style="max-width: 600px; margin: 20px auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color:
+    #333; background: #ffffff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
+        <h2 style="text-align:center;">🛍️ Detalles del Pedido | Plutarco Almacen 🥖</h2>
+        <div style="background: #f7f9fc; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e3e6eb;">
+            <p><strong>Nombre:</strong> {order.nombre_completo}</p>
+            <p><strong>Email:</strong> {order.correo}</p>
+            <p><strong>Teléfono:</strong> {order.telefono}</p>
+            <p><strong>Dirección:</strong> {order.direccion}</p>
+            <p><strong>Día de entrega:</strong> {order.dia_entrega}</p>
+            {"<p><strong>Comentario:</strong> " + order.comentario + "</p>" if order.comentario else ""}
+        </div>
+        <table style="width:100%; border-collapse: collapse; font-size: 15px; margin-top:10px; margin-bottom:10px;">
+            <thead>
+                <tr style="background:#f5f5f5;">
+                    <th style="text-align:left; padding:6px;">Cant.</th>
+                    <th style="text-align:left; padding:6px;">Producto</th>
+                    <th style="text-align:right; padding:6px;">Precio</th>
+                </tr>
+            </thead>
+            <tbody>
+                {productos_html}
+            </tbody>
+        </table>
+        <div style="margin-top: 20px;">
+        <table style="width:100%; border-collapse: collapse; font-size: 15px;">
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">Subtotal:</td>
+                <td style="padding: 8px; text-align:right; border-bottom: 1px solid #ddd;"><strong>${order.subtotal:.2f}</strong></td>
+            </tr>
+            <tr>
+                <td style="padding: 8px; border-bottom: 1px solid #ddd;">Envío:</td>
+                <td style="padding: 8px; text-align:right; border-bottom: 1px solid #ddd;"><strong>${order.envio_cobrado:.2f}</strong></td>
+            </tr>
+            <tr>
+                <td style="padding: 10px; font-size: 1.1em; font-weight: bold;">TOTAL:</td>
+                <td style="padding: 10px; text-align:right; font-size: 1.1em; font-weight: bold; color: #1e88e5;">${order.total:.2f}</td>
+            </tr>
+        </table>
+        </div>
+        <div style="background: #fff3cd; padding: 16px; border-left: 5px solid #ffcc00; margin-top: 30px; border-radius: 8px;">
+            <h4 style="margin-top: 0;">💸 Información para el pago</h4>
+            <p>Por favor, transferí <strong>${order.total}</strong> al alias <strong>plutarco.almacen</strong></p>
+            <p>Cuenta a nombre de <strong>Dario Chapur</strong>.</p>
+            <p>Una vez realizado el pago, te pedimos que envíes el comprobante a este mismo correo electrónico o a nuestro whatsapp: <a href="https://wa.me/5491150168920?text=Hola Plutarco Almacen! Realicé un pedido de $${order.total} a nombre de ${order.nombre_completo}"> 11 5016-8920.</p>
+            <p>Confirmaremos tu pedido una vez recibido el comprobante.</p>
+        </div>
+        <div style="margin-top: 30px; background: #e2e3e5; padding: 14px; border-left: 5px solid #6c757d; border-radius: 8px;">
+            <p>⚠️ En caso de no contar con stock de algún producto, se te notificará y se realizará la devolución del monto correspondiente.</p>
+        </div>
+    </div>
+    """
+    return html
+
 
 
 def recompute_order_totals(session: Session, order: Order):
@@ -47,6 +138,7 @@ def api_create_order(payload: dict):
         telefono=payload.get("telefono", ""),
         direccion=payload.get("direccion", ""),
         comentario=payload.get("comentario", ""),
+        dia_pedido=date.today(),
         dia_entrega=payload.get("dia_entrega"),
         envio_cobrado=float(payload.get("envio_cobrado", 0)),
         costo_envio_real=float(payload.get("costo_envio_real", 0)),
@@ -81,6 +173,12 @@ def api_create_order(payload: dict):
         recompute_order_totals(s, order)
 
         items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
+        # enviar mail de confirmación
+        html_pedido = generar_html_pedido(order)
+        enviar_mail(order.correo, "✅ Confirmación de tu pedido en Plutarco Almacén", html_pedido)
+
+        #enviar mail a admin
+        enviar_mail("plutarcoalmacen@gmail.com", f"Nuevo pedido de {order.nombre_completo}", html_pedido)
 
         return {"order": order, "productos": items}
 
@@ -150,7 +248,7 @@ def api_update_order(order_id: int, payload: dict):
 # -------------------------
 # LISTAR
 # -------------------------
-@router.get("/")
+@router.get("/list")
 def api_get_orders():
     with get_session() as s:
         return s.exec(select(Order)).all()

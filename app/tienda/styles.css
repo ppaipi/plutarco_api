@@ -1144,3 +1144,21 @@ footer {
   background: #f7fff8 !important;
   transition: border-color 0.18s, box-shadow 0.18s;
 }
+/* Spinner de carga para el costo de envío */
+.loading-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #ddd;
+  border-top-color: #1E88E5;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

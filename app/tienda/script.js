@@ -19,114 +19,11 @@ const LOCAL_ADDRESS = 'Ibera 3852, Coghlan, CABA, Argentina.';
 let ordenCategorias = [];
 let ordenSubCategorias = [];
 
+
 let direccionValidaGoogle = false; // Variable global para saber si la dirección es válida de Google
+function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// Escape HTML helper (used for attribute safety)
-function escapeHtml(s){ 
-  if(!s) return ''; 
-  return String(s).replace(/[&<>"']/g, c => ({
-    '&':'&amp;',
-    '<':'&lt;',
-    '>':'&gt;',
-    '"':'&quot;',
-    "'": '&#39;'
-  }[c])); 
-}
 
-/* async function loadProducts() {
-  try {
-    const res = await fetch('../media/articulos.xlsx?cacheBust=' + Date.now());
-    const data = await res.arrayBuffer();
-
-    // Leer el Excel
-    const workbook = XLSX.read(data, { type: 'array' });
-    const sheetName = workbook.SheetNames[0];
-    const sheet = workbook.Sheets[sheetName];
-
-    // Convertir la hoja a JSON
-    const jsonData = XLSX.utils.sheet_to_json(sheet, { defval: "" });
-
-    // Mapear a tu formato
-    allProducts = jsonData.map(row => ({
-      Codigo: (row["CODIGO BARRA"] || "").toString().trim(),
-      Nombre: row["DESCRIPCION LARGA"] || "",
-      Descripcion: row["DESCRIPCION ADICIONAL"] || "",
-      Categoria: row["RUBRO"] || "",
-      SubCategoria: row["SUBRUBRO"] || "",
-      Precio: parsePrecio(row["PRECIO VENTA C/IVA"]),
-      Proveedor: row["PROVEEDOR"] || "",
-    }));
-
-    // Filtrar solo habilitados
-    const resCodes = await fetch('../media/Habilitados.json?cacheBust=' + Date.now());
-    enabledCodes = await resCodes.json();
-    products = allProducts.filter(p => enabledCodes.includes(p.Codigo));
-    filteredProducts = [...products];
-
-    // Render
-    renderCategoryMenu();
-    renderProductsByCategory(filteredProducts);
-
-    const header = document.querySelector('header');
-    if (header) {
-      header.scrollIntoView({ behavior: 'smooth' });
-    }
-  } catch (err) {
-    console.error("Error cargando productos:", err);
-  }
-}
-function parsePrecio(str) {
-  if (!str) return 0;
-  // Quitar puntos de miles y reemplazar coma decimal por punto
-  const limpio = str.replace(/\./g, '').replace(',', '.');
-  return parseFloat(limpio) || 0;
-}
-
-async function loadRanking() {
-  const res = await fetch('../media/Ranking.csv?cacheBust=' + Date.now());
-  const csvText = await res.text();
-  const rows = csvText.trim().split('\n').slice(1); // saco encabezado
-
-  rows.forEach(row => {
-    const cols = row.split(';'); 
-    if (cols.length < 2) return;
-
-    const rank = parseInt(cols[0]?.trim(), 10); // columna 1 = Ranking
-    const producto = cols[1]?.trim();           // columna 2 = Producto
-
-    if (producto && !isNaN(rank)) {
-      rankingMap[producto] = rank;
-    }
-  });
-} */
-/* curl -X 'GET' \
-  'https://plutarco-api.fly.dev/products/enabled' \
-  -H 'accept: application/json'
-
-Request URL
-
-https://plutarco-api.fly.dev/products/enabled
-
-Server response
-Code	Details
-200	
-Response body
-
-[
-  {
-    "id": 2,
-    "categoria": "Panificados Integrales",
-    "precio": 3800,
-    "habilitado": true,
-    "imagen_url": "/images/PLUT0061.jpg",
-    "nombre": "1/2 Pan de Sarraceno",
-    "descripcion": "Medio Pan Artesanal elaborado a base de masa madre de harina de sarraceno, psyllium y sal marina. \nLibre de gluten (contiene contaminacion cruzada)\nPRODUCTO VEGANO",
-    "codigo": "PLUT0061",
-    "subcategoria": "",
-    "proveedor": "Plutarco",
-    "orden": null
-  },
- */
 async function loadProducts() {
     try {
         const res = await fetch('https://plutarco-api.fly.dev/products/enabled');
@@ -160,12 +57,13 @@ async function loadconfig(){
     try {
     const res = await fetch('https://plutarco-api.fly.dev/config/list');
     configuracion = await res.json();
-    pedidoMinimo = configuracion.pedido_minimo || 0;
     diasEntregaConfig = configuracion.dias_entrega || [];
     preciosEnvioConfig = configuracion.envio_tarifas || [];
+    cantidadMinima = configuracion.pedido_minimo || 0;
     ordenCategorias = configuracion.orden_categorias || ordenCategorias;
     ordenSubCategorias = configuracion.orden_subcategorias || ordenSubCategorias;
     console.log("Configuración cargada:", configuracion);
+    cargarDiasEntrega();
   } catch (err) {
     console.error("Error cargando configuración:", err);
   }
@@ -236,7 +134,7 @@ div.innerHTML = `
     alt="${prod.Nombre}" 
     loading="lazy"
     style="object-fit: cover;"
-    onerror="this.src='/static/placeholder.jpg'";"
+    onerror="this.src='/media/placeholder.jpg'";"
   >
 
   <h3>${prod.Nombre}</h3>
@@ -267,10 +165,9 @@ function cargarDiasEntrega() {
   const diasValidos = (Array.isArray(diasEntregaConfig) && diasEntregaConfig.length > 0)
     ? diasEntregaConfig
     : [
-        { weekday: 1, cutoff: "14:00" },
-        { weekday: 4, cutoff: "" }
+        { weekday: 1, cutoff: "" }, // lunes
+        { weekday: 4, cutoff: "" }  // jueves
       ];
-
   const ahora = new Date();
   let fechaIterada = new Date();
   const opciones = [];
@@ -759,7 +656,7 @@ function updateCart() {
           class="thumb"
           src="${escapeHtml(producto.Imagen)}"
           alt="${producto.Nombre}" 
-          onerror="this.onerror=null; this.src='/static/placeholder.jpg';"
+          onerror="this.onerror=null; this.src='/media/placeholder.jpg';"
           width="80" height="80"
           style="object-fit: cover;">
         <div>
@@ -845,6 +742,10 @@ function validarDia(event) {
 let timeoutEnvio; // para evitar llamadas repetidas
 let ultimaDireccionConsultada = "";
 let ultimoResultadoEnvio = null;
+let calculandoEnvio = false; // Estado de carga
+
+// Cache mejorado: almacenar múltiples resultados
+let cacheEnvios = {};
 
 function initAutocomplete() {
   const input = document.getElementById('address');
@@ -868,14 +769,8 @@ function initAutocomplete() {
       direccionValidaGoogle = true;
       camposTocados['address'] = true;
       validarDireccionSolo();
-
-      // Espera 2 segundos antes de llamar a la API (evita múltiples llamadas)
-      clearTimeout(timeoutEnvio);
-      timeoutEnvio = setTimeout(() => {
-        const destino = place.formatted_address.trim();
-        actualizarEnvioConCache(destino);
-      }, 2000);
-
+      const destino = place.formatted_address.trim();
+      actualizarEnvioConCache(destino);
       updateCart();
     } else {
       direccionValidaGoogle = false;
@@ -885,8 +780,9 @@ function initAutocomplete() {
 
 function actualizarEnvioConCache(destino) {
   // Si el destino es el mismo que el último calculado y tenemos caché, reutilizamos el resultado
-  if (destino === ultimaDireccionConsultada && ultimoResultadoEnvio) {
-    const { costo, msg, color } = ultimoResultadoEnvio;
+  const cacheKey = destino.toLowerCase().trim();
+  if (cacheEnvios[cacheKey]) {
+    const { costo, msg, color } = cacheEnvios[cacheKey];
     costoEnvioActual = costo;
     mostrarMensajeEnvio(msg, color);
     updateCart();
@@ -903,10 +799,7 @@ function actualizarEnvioConCache(destino) {
 
   // Llamar a la API solo si no está en caché
   calcularCostoEnvio(destino, subtotal, function(costo, mensaje, color) {
-    // Guardar en caché
-    ultimaDireccionConsultada = destino;
-    ultimoResultadoEnvio = { costo, msg: mensaje, color };
-
+    // Resultado ya se cachea en calcularCostoEnvio
     // Mostrar resultado
     costoEnvioActual = costo;
     mostrarMensajeEnvio(mensaje, color);
@@ -920,6 +813,18 @@ function calcularCostoEnvio(destino, subtotal, callback) {
     return;
   }
 
+  // Verificar si está en cache
+  const cacheKey = destino.toLowerCase().trim();
+  if (cacheEnvios[cacheKey]) {
+    const { costo, msg, color } = cacheEnvios[cacheKey];
+    callback(costo, msg, color);
+    return;
+  }
+
+  // Mostrar indicador de carga
+  calculandoEnvio = true;
+  mostrarMensajeEnvio('', 'black');
+
   const service = new google.maps.DistanceMatrixService();
 
   service.getDistanceMatrix({
@@ -927,6 +832,8 @@ function calcularCostoEnvio(destino, subtotal, callback) {
     destinations: [destino],
     travelMode: 'DRIVING'
   }, (response, status) => {
+    calculandoEnvio = false;
+
     if (status !== 'OK' || !response.rows?.[0]?.elements?.[0]) {
       callback(0, 'Error al calcular distancia.', 'red');
       return;
@@ -938,38 +845,36 @@ function calcularCostoEnvio(destino, subtotal, callback) {
       return;
     }
 
+    // Distancia calculada
     const km = element.distance.value / 1000;
     const kmRedondeado = Math.ceil(km * 10) / 10;
 
     let costo = 0;
     let msg = '';
     let color = 'green';
-    let costo_oferta = 0;
 
-    // Rangos de costo
-    if (km <= 1) costo_oferta = 1000;
-    else if (km <= 2) costo_oferta = 1500;
-    else if (km <= 3) costo = 1500;
-    else if (km <= 4) costo = 2000;
-    else if (km <= 5) costo = 2500;
-    else if (km <= 6) costo = 3500;
-    else if (km <= 7) costo = 4500;
-    else if (km <= 8) costo = 5500;
-    else if (km <= 9) costo = 6500;
-    else if (km <= 10) costo = 7000;
-    else {
-      msg = `🛑 Fuera del rango de entrega (distancia ${kmRedondeado} km) <a href="https://wa.me/5491150168920?text=Hola! Vengo de la página web" target="_blank">Escribinos y acordamos un precio!</a>`;
-      color = 'red';
-      costo = 0;
+    // Ordenar rangos por km ascendente
+    const rangos = [...preciosEnvioConfig].sort((a, b) => a.km - b.km);
+
+    // Buscar rango válido
+    const rango = rangos.find(r => kmRedondeado <= r.km);
+
+    if (!rango) {
+      callback(0, 'Fuera del area de entrega (' + kmRedondeado + ' km) <a href="https://wa.me/5491150168920?text=Hola! Vengo de la página web. \nQuiero cotizar un envio de '+ kmRedondeado + ' km a la dirección: ' + destino + '" target="_blank">Escribinos y acordamos un precio!</a>', 'red');
+      return;
     }
 
-    if ((subtotal >= cantidadMinima) || (costo == 0)) {
-      callback(0, msg || `🚚 ENVÍO GRATIS <del>$${costo + costo_oferta}</del> ➜ SIN COSTO`, color);
-    } else {
-      callback(costo, msg || `🚚 Costo envío: $${costo} (envío gratis compras superiores a $${cantidadMinima})`, color);
-    }
+    costo = rango.price;
+    msg = `Envío ${kmRedondeado} km — $${costo}`;
+    color = 'green';
+
+    // Guardar en cache
+    cacheEnvios[cacheKey] = { costo, msg, color };
+
+    callback(costo, msg, color);    
   });
 }
+
 
 
 function actualizarEnvio() {
@@ -992,10 +897,16 @@ function actualizarEnvio() {
 function mostrarMensajeEnvio(texto, color) {
   const envioMsg = document.getElementById('envio-msg');
   if (envioMsg) {
-    envioMsg.innerHTML = texto;
-    envioMsg.style.color = color;
+    if (calculandoEnvio) {
+      envioMsg.innerHTML = '<span class="loading-spinner"></span> Calculando envío...';
+      envioMsg.style.color = '#666';
+    } else {
+      envioMsg.innerHTML = texto;
+      envioMsg.style.color = color;
+    }
   }
 }
+
 
 function bloquearBoton(btn) {
   if (btn) {
@@ -1227,7 +1138,7 @@ function todosCamposValidados() {
   return Object.values(validacionCampos).every(v => v === true);
 }
 
-function enviarPedido() {
+async function enviarPedido() {
   intentoEnviar = true;
   validarCamposEnTiempoReal();
   if (!todosCamposValidados()) return;
@@ -1236,7 +1147,7 @@ function enviarPedido() {
   bloquearBoton(btn);
 
   let totalProductos = 0;
-  const productos = [];
+  let productos = [];
 
   // Calcular productos y subtotal
   for (const codigo in cart) {
@@ -1246,8 +1157,9 @@ function enviarPedido() {
     productos.push({
       nombre: prod.Nombre,
       codigo: prod.Codigo,
-      unidades: cantidad,
-      total: prod.Precio * cantidad
+      cantidad: cantidad,
+      precio_unitario: prod.Precio,
+      subtotal: prod.Precio * cantidad
     });
   }
 
@@ -1257,50 +1169,63 @@ function enviarPedido() {
     direccion = autocomplete.getPlace().formatted_address;
   }
 
-  const pedido = {
-    nombre: document.getElementById('name').value.trim(),
-    mail: document.getElementById('email').value.trim(),
+  // Construir payload según la API esperada
+  const payload = {
+    nombre_completo: document.getElementById('name').value.trim(),
+    correo: document.getElementById('email').value.trim(),
     telefono: document.getElementById('phone').value.trim(),
     direccion: direccion,
-    retiro: document.getElementById('pickup-day').value,
     comentario: document.getElementById('comment').value.trim(),
+    dia_entrega: document.getElementById('pickup-day').value || null,
+    envio_cobrado: Number(costoEnvioActual) || 0,
+    confirmado: false,
+    entregado: false,
     productos: productos,
     subtotal: totalProductos,
-    envio: costoEnvioActual,
-    total: totalProductos + costoEnvioActual
-  }; 
+    total: totalProductos + (Number(costoEnvioActual) || 0)
+  };
 
-  // Form-data para evitar CORS
-  const formData = new URLSearchParams();
-  formData.append('data', JSON.stringify(pedido));
+  try {
+      const res = await fetch('https://plutarco-api.fly.dev/orders/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
 
-  fetch('https://script.google.com/macros/s/AKfycbzXPqRns7UKWq_vr1ZpA98Dpj7DlLg7XvHiPcWu1usYqaFDY6iMgHgMPdnH_Jk04Qf_/exec', {
-    method: 'POST',
-    body: formData
-  })
-  .finally(() => {
-    alert('Pedido enviado con éxito! Recibirá al mail instrucciones de pago.');
-    // --- VACIAR TODO EL CARRITO ---
-    cart = {};                      // borra los productos seleccionados
-    filteredProducts = [...products]; // resetear listado de productos
-    renderProductsByCategory(filteredProducts);
-    mostrarMensajeEnvio('', 'black');
-    costoEnvioActual = 0;
-    updateCart();
 
-    // Limpiar campos del formulario
-    document.getElementById('name').value = '';
-    document.getElementById('email').value = '';
-    document.getElementById('phone').value = '';
-    document.getElementById('address').value = '';
-    document.getElementById('pickup-day').value = '';
-    document.getElementById('comment').value = '';
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      console.error('Error al enviar pedido:', res.status, text);
+      alert('Error enviando pedido. Intente nuevamente.');
+    } else {
+      alert('Pedido enviado con éxito! Recibirá al mail instrucciones de pago.');
 
+      // --- VACIAR TODO EL CARRITO ---
+      cart = {};                      // borra los productos seleccionados
+      filteredProducts = [...products]; // resetear listado de productos
+      renderProductsByCategory(filteredProducts);
+      mostrarMensajeEnvio('', 'black');
+      costoEnvioActual = 0;
+      updateCart();
+
+      // Limpiar campos del formulario
+      document.getElementById('name').value = '';
+      document.getElementById('email').value = '';
+      document.getElementById('phone').value = '';
+      document.getElementById('address').value = '';
+      document.getElementById('pickup-day').value = '';
+      document.getElementById('comment').value = '';
+    }
+  } catch (err) {
+    console.error('Fetch error enviarPedido:', err);
+    alert('Error enviando pedido. Intente nuevamente.');
+  } finally {
     desbloquearBoton(btn);
     intentoEnviar = false; // reset para el próximo pedido
-  });
+  }
 }
-
 
 // --- Funcionalidad modal descripción producto ---
 function crearModalDescripcion(prod) {
@@ -1322,7 +1247,7 @@ function crearModalDescripcion(prod) {
   img.alt = prod.Nombre;
   img.onerror = function() {
     this.onerror = null;
-    this.src = '/static/placeholder.jpg';
+    this.src = '/media/placeholder.jpg';
   };
   img.onclick = () => {
     toggleZoom(img.id);
@@ -1541,7 +1466,7 @@ function toggleZoom(idImagen) {
 window.onload = () => {
   loadProducts();
   loadconfig();
-  cargarDiasEntrega();
+  
   initAutocomplete();
 
   const searchInput = document.getElementById('search-input');

@@ -10,6 +10,7 @@ from app.web.pedidos import router as pedidos_router
 from app.web.productos import router as productos_router
 from app.web.configuracion import router as configuracion_router
 from app.web.tienda import router as tienda_router
+from app.web.resumen import router as resumen_router
 
 api_router = APIRouter()
 
@@ -18,6 +19,8 @@ api_router.include_router(productos_router, prefix="/productos", tags=["producto
 api_router.include_router(pedidos_router, prefix="/pedidos", tags=["pedidos"])
 api_router.include_router(configuracion_router, prefix="/configuracion", tags=["configuracion"])
 api_router.include_router(tienda_router, prefix="/tienda", tags=["tienda"])
+api_router.include_router(resumen_router, prefix="/resumen", tags=["resumen"])
+
 
 # API
 api_router.include_router(products_router)

@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Resumen Mensual — Panel Admin Plutarco</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/static/resumen.css">
+</head>
+<body>
+
+<div id="app">
+
+<header class="topbar">
+  <div class="brand">Plutarco <span class="muted">— Resumen Mensual</span></div>
+  <div class="actions">
+    <button id="theme-toggle" class="btn small ghost">🌙</button>
+    <a href="/pedidos/" class="btn small">Pedidos</a>
+    <a href="/productos" class="btn small">Productos</a>
+    <a href="/resumen" class="btn small active">Resumen</a>
+    <a href="/configuracion" class="btn small">Configuración</a>
+    <button id="btn-logout" class="btn ghost">Salir</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <section class="card controls">
+    <div class="left">
+      <label for="month-selector" style="margin:0;">Mes:</label>
+      <select id="month-selector" class="input" style="width:200px;">
+        <option value="">-- Seleccionar mes --</option>
+      </select>
+    </div>
+  </section>
+
+  <!-- RESUMEN GENERAL -->
+  <section class="card">
+    <h3>📊 Resumen General</h3>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="label">Subtotal</div>
+        <div class="value" id="total-subtotal">$0.00</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Comisión (20%)</div>
+        <div class="value" id="total-percentage">$0.00</div>
+      </div>
+      <div class="summary-item highlight">
+        <div class="label">Ganancia</div>
+        <div class="value" id="total-profit">$0.00</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- DELIVERY -->
+  <section class="card">
+    <h3>🚚 Delivery</h3>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="label">Cobros Delivery</div>
+        <div class="value" id="delivery-charged">$0.00</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Gastos Delivery</div>
+        <div class="value negative" id="delivery-costs">$0.00</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Diferencia</div>
+        <div class="value" id="delivery-difference">$0.00</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGOS POR PERSONA -->
+  <section class="card">
+    <h3>👤 Pagos por Persona</h3>
+    <div class="summary-grid">
+      <div class="summary-item">
+        <div class="label">Comisión c/u (10%)</div>
+        <div class="value" id="payment-per-person">$0.00</div>
+      </div>
+      <div class="summary-item">
+        <div class="label">Diferencia Delivery c/u</div>
+        <div class="value" id="delivery-diff-per-person">$0.00</div>
+      </div>
+      <div class="summary-item highlight">
+        <div class="label">Total c/u</div>
+        <div class="value" id="total-per-person">$0.00</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- BALANCE FINAL -->
+  <section class="card">
+    <h3>💰 Balance Final</h3>
+    <div class="summary-grid">
+      <div class="summary-item success">
+        <div class="label">Ingresos</div>
+        <div class="value" id="total-income">$0.00</div>
+      </div>
+      <div class="summary-item danger">
+        <div class="label">Egresos</div>
+        <div class="value" id="total-expenses">$0.00</div>
+      </div>
+      <div class="summary-item highlight balance">
+        <div class="label">Saldo Final</div>
+        <div class="value" id="final-balance">$0.00</div>
+      </div>
+    </div>
+  </section>
+
+  <div style="height: 60px;"></div>
+
+</main>
+
+</div>
+
+<script src="/static/resumen.js"></script>
+</body>
+</html>

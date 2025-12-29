@@ -472,3 +472,167 @@ input[type="time"] {
   }
 }
 
+@media (max-width: 1024px) {
+
+  .container {
+    max-width: 100%;
+  }
+
+  .order-section {
+    gap: 16px;
+  }
+
+  .card, .card-section {
+    padding: 18px;
+  }
+
+  .day-row {
+    gap: 10px;
+  }
+}
+@media (max-width: 768px) {
+
+  /* ===== TOPBAR ===== */
+  .topbar {
+    flex-direction: column;
+    height: auto;
+    padding: 12px;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .brand {
+    text-align: center;
+  }
+
+  .actions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* ===== CONTENEDOR ===== */
+  .container {
+    padding: 0 12px;
+    margin: 14px auto;
+  }
+
+  /* ===== CARDS ===== */
+  .card, .card-section {
+    padding: 16px;
+  }
+
+  .card-section h2 {
+    text-align: center;
+    font-size: 18px;
+  }
+
+  .card-section h3 {
+    font-size: 15px;
+  }
+
+  /* ===== FORMS ===== */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* ===== DAYS LIST ===== */
+  .day-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .day-row label {
+    min-width: unset;
+    font-size: 14px;
+  }
+
+  .day-row input[type="time"] {
+    width: 100%;
+  }
+
+  /* ===== ORDER SECTION ===== */
+  .order-section {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .order-subsection {
+    padding: 14px;
+  }
+
+  /* ===== SELECTOR ===== */
+  .selector-wrapper {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  /* ===== TAGS ===== */
+  .tags-display {
+    padding: 12px;
+  }
+
+  .tag {
+    font-size: 14px;
+    padding: 8px 14px;
+  }
+
+  /* ===== BOTONES ===== */
+  .btn, button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn.small, .small-btn {
+    width: auto;
+  }
+}
+@media (max-width: 480px) {
+
+  body {
+    font-size: 14px;
+  }
+
+  .card, .card-section {
+    padding: 14px;
+    border-radius: 14px;
+  }
+
+  .card-section h2 {
+    font-size: 17px;
+  }
+
+  .card-section h3 {
+    font-size: 14px;
+  }
+
+  .tag {
+    max-width: 100%;
+  }
+
+  .tag-label {
+    max-width: 100px;
+  }
+
+  .msg {
+    font-size: 12px;
+  }
+}
+@media (hover: none) {
+
+  .card:hover,
+  .card-section:hover,
+  .order-subsection:hover,
+  .day-row:hover {
+    transform: none;
+    box-shadow: none;
+  }
+
+  button:hover,
+  .btn:hover {
+    transform: none;
+  }
+}

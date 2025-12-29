@@ -483,7 +483,7 @@ if (btnImportExcel && fileExcel) {
     try{
       // POST FormData para import
       {
-        const path = '/orders/import-excel';
+        const path = 'orders/import-excel';
         const headers = {};
         const token = localStorage.getItem('token');
         if (token) headers['x-api-key'] = token;
@@ -530,7 +530,7 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
 
       // PUT pedido
       {
-        const path = `/orders/${editingOrderId}`;
+        const path = `orders/${editingOrderId}`;
         const headers = { 'Content-Type': 'application/json' };
         const token = localStorage.getItem('token');
         if (token) headers['x-api-key'] = token;
@@ -556,7 +556,7 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
 
       // POST crear pedido (ruta relativa)
       {
-        const path = '/orders';
+        const path = 'orders';
         const headers = { 'Content-Type': 'application/json' };
         const token = localStorage.getItem('token');
         if (token) headers['x-api-key'] = token;
@@ -584,7 +584,7 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
    if(!confirm(`Confirmar eliminación de pedido #${editingOrderId}?`)) return;
    try{
     {
-      const path = `/orders/${editingOrderId}`;
+      const path = `orders/${editingOrderId}`;
       const headers = {};
       const token = localStorage.getItem('token');
       if (token) headers['x-api-key'] = token;

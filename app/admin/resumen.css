@@ -1,0 +1,356 @@
+/* ========================================
+   Resumen Mensual - Estilos Mejorados
+   ======================================== */
+
+.container {
+  max-width: 1200px;
+  margin: 22px auto;
+  padding: 0 16px;
+}
+
+.card {
+  background: var(--card);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: var(--gap);
+}
+
+.card h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.controls label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.controls .left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#month-selector {
+  min-width: 200px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--input-border);
+  background: var(--card);
+  color: var(--accent);
+  font-size: 14px;
+  cursor: pointer;
+  transition: box-shadow 0.15s, border-color 0.15s;
+}
+
+#month-selector:focus {
+  outline: none;
+  box-shadow: 0 6px 20px rgba(11, 118, 255, 0.12);
+  border-color: var(--primary);
+}
+
+/* ========================================
+   Summary Grid
+   ======================================== */
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+  margin: 0;
+}
+
+
+.summary-item {
+  background: var(--bg2);
+  border-radius: 10px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.summary-item:hover {
+  box-shadow: var(--shadow-light);
+  transform: translateY(-2px);
+}
+
+.summary-item .label {
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 8px;
+}
+
+.summary-item .value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--primary);
+  word-break: break-word;
+}
+
+.summary-item.success .value {
+  color: var(--success);
+}
+
+.summary-item.danger .value {
+  color: var(--danger);
+}
+
+.summary-item.highlight {
+  background: linear-gradient(135deg, rgba(11, 118, 255, 0.08), rgba(22, 163, 74, 0.08));
+  border: 1px solid var(--primary);
+}
+
+.summary-item.highlight .value {
+  color: var(--accent);
+  font-size: 28px;
+}
+
+.summary-item.balance .value {
+  font-size: 32px;
+  font-weight: 800;
+}
+
+.summary-item .negative {
+  color: var(--danger);
+}
+
+/* ========================================
+   Responsive
+   ======================================== */
+
+@media (max-width: 768px) {
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-item .value {
+    font-size: 20px;
+  }
+
+  .summary-item.highlight .value,
+  .summary-item.balance .value {
+    font-size: 24px;
+  }
+
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #month-selector {
+    width: 100%;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  .container {
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .summary-item .value {
+    font-size: 18px;
+  }
+
+  .card h3 {
+    font-size: 15px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+}
+
+/* ========================================
+   Dark Mode (already inherited from style.css)
+   ======================================== */
+
+:root.dark .summary-item {
+  background: var(--bg2);
+  border-color: var(--border);
+}
+
+:root.dark .summary-item.highlight {
+  border-color: rgba(11, 118, 255, 0.4);
+}
+
+/* ========================================
+   Animaciones
+   ======================================== */
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.summary-item {
+  animation: slideIn 0.3s ease forwards;
+}
+
+.summary-item:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.summary-item:nth-child(2) {
+  animation-delay: 0.1s;
+}
+
+.summary-item:nth-child(3) {
+  animation-delay: 0.15s;
+}
+@media (max-width: 1024px) {
+
+  .container {
+    max-width: 100%;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .summary-item {
+    padding: 14px;
+  }
+
+  .summary-item .value {
+    font-size: 22px;
+  }
+}
+@media (max-width: 768px) {
+
+  /* CONTENEDOR */
+  .container {
+    padding: 0 12px;
+  }
+
+  /* CARD */
+  .card {
+    padding: 16px;
+  }
+
+  .card h3 {
+    justify-content: center;
+    text-align: center;
+  }
+
+  /* CONTROLES */
+  .controls {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .controls label {
+    font-size: 13px;
+  }
+
+  .controls .left {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  #month-selector {
+    width: 100%;
+    font-size: 15px;
+  }
+
+  /* GRID */
+  .summary-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  /* ITEMS */
+  .summary-item {
+    text-align: center;
+    padding: 16px;
+  }
+
+  .summary-item .label {
+    font-size: 12px;
+    letter-spacing: 0.4px;
+  }
+
+  .summary-item .value {
+    font-size: 22px;
+  }
+
+  .summary-item.highlight .value {
+    font-size: 26px;
+  }
+
+  .summary-item.balance .value {
+    font-size: 28px;
+  }
+}
+@media (max-width: 480px) {
+
+  body {
+    font-size: 14px;
+  }
+
+  .card {
+    padding: 14px;
+  }
+
+  .card h3 {
+    font-size: 15px;
+  }
+
+  .summary-item {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .summary-item .label {
+    font-size: 11px;
+  }
+
+  .summary-item .value {
+    font-size: 20px;
+  }
+
+  .summary-item.highlight .value {
+    font-size: 24px;
+  }
+
+  .summary-item.balance .value {
+    font-size: 26px;
+  }
+}
+@media (hover: none) {
+  .summary-item:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}

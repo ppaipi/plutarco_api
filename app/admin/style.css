@@ -55,6 +55,10 @@ body{
   transition: background .25s ease, color .25s ease;
 }
 
+.active {
+  background:var(--primary) !important; 
+  color:#fff !important;
+}
 .hidden { display:none; }
 .small { font-size:13px; color:var(--muted); }
 .center { text-align:center; padding:28px; }
@@ -345,4 +349,139 @@ input[type=checkbox]{
 @media(max-width:880px){
   .controls{ flex-direction:column; align-items:stretch; }
   .grid{ grid-template-columns:1fr; }
+}
+@media (max-width: 1024px) {
+
+  .container {
+    max-width: 100%;
+    padding: 0 12px;
+  }
+
+  .grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  }
+
+  #search {
+    width: 180px;
+  }
+
+  .topbar {
+    padding: 0 14px;
+  }
+}
+@media (max-width: 768px) {
+
+  /* TOPBAR */
+  .topbar {
+    flex-direction: column;
+    height: auto;
+    gap: 10px;
+    padding: 12px;
+    align-items: stretch;
+  }
+
+  .brand {
+    text-align: center;
+  }
+
+  .actions {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* CONTROLES */
+  .controls {
+    gap: 10px;
+  }
+
+  .controls .left,
+  .controls .right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  #search {
+    width: 100%;
+  }
+
+  /* PRODUCT GRID */
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* PRODUCT CARD */
+  .product-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+
+  .thumb {
+    width: 140px;
+    height: 140px;
+  }
+
+  .meta {
+    align-items: center;
+  }
+
+  .meta h4 {
+    height: auto;
+    -webkit-line-clamp: 3;
+  }
+
+  /* ORDER INPUTS */
+  .row {
+    justify-content: center;
+  }
+
+  .inp-order {
+    width: 70px !important;
+  }
+
+  /* BOTONES */
+  .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .btn.small {
+    width: auto;
+  }
+}
+@media (max-width: 480px) {
+
+  body {
+    font-size: 14px;
+  }
+
+  .card {
+    padding: 12px;
+  }
+
+  .thumb {
+    width: 120px;
+    height: 120px;
+  }
+
+  .order-buttons button {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+
+  .typeahead-list {
+    max-height: 200px;
+  }
+
+  input,
+  select {
+    font-size: 15px;
+  }
+}
+@media (hover: none) {
+  .product-card:hover {
+    transform: none;
+    box-shadow: var(--shadow-light);
+  }
 }

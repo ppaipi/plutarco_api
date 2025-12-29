@@ -63,4 +63,4 @@ class Configuracion(SQLModel, table=True):
     dias_entrega: Optional[list] = Field(default_factory=list, sa_column=Column(SA_JSON))
     orden_categorias: Optional[list] = Field(default_factory=list, sa_column=Column(SA_JSON))
     orden_subcategorias: Optional[list] = Field(default_factory=list, sa_column=Column(SA_JSON))
-    pedido_minimo: Optional[float] = Field(default=0.0)  # Monto mínimo de pedido
+    pedido_minimo: Optional[int] = Field(default=0.0)  # Monto mínimo de pedido

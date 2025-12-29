@@ -65,7 +65,7 @@ app.mount(
 # Montar imágenes estáticas accesibles en /media_static (usa IMAGES_DIR)
 app.mount(
     "/media_static",
-    StaticFiles(directory=IMAGES_DIR),
+    StaticFiles(directory="app/media_static"),
     name="media_static"
 )
 

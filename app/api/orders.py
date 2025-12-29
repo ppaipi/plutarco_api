@@ -9,7 +9,8 @@ import os
 import requests
 from sqlmodel import Session
 from fastapi import UploadFile, File
-
+from datetime import datetime
+from sqlalchemy import text
 
 
 router = APIRouter(prefix="/orders", tags=["orders"])
@@ -306,14 +307,22 @@ def api_delete_order(order_id: int):
 # -------------------------
 # ELIMINAR TODOS LOS PEDIDOS
 # -------------------------
-@router.delete("/delete/all")
+@router.delete("/delete/all", status_code=204)
 def api_delete_all():
-    with get_session() as s:
-        s.exec("DELETE FROM orderproduct")
-        s.exec("DELETE FROM 'order'")
-        s.commit()
+    try:
+        with get_session() as s:
+            # borrar hijos primero
+            s.exec(text('DELETE FROM orderproduct'))
+            s.exec(text('DELETE FROM "order"'))
+            s.commit()
+
         return {"ok": True, "message": "Todos los pedidos eliminados"}
 
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e)
+        )
 
 # -------------------------
 # IMPORTAR PEDIDOS DESDE EXCEL
@@ -335,19 +344,42 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                     errors.append(f"Fila {idx+1}: sin nombre")
                     continue
 
-                dia_raw = row.get("dia de entrega", "")
+                dia_entrega_raw = row.get("dia de entrega", "")
+                hora_envio_raw = row.get("Hora de envio", "")
+                costo_envio_real = row.get("COSTO ENVIO", 0)
+                envio_cobrado = row.get("Envio", 0)
                 try:
-                    dia_entrega = pd.to_datetime(dia_raw).date() if dia_raw else None
+                    envio_cobrado = float(str(envio_cobrado).replace("$", "").replace(".", "").replace(",", "."))
+                except:
+                    envio_cobrado = 0
+                try:
+                    costo_envio_real = float(str(costo_envio_real).replace("$", "").replace(".", "").replace(",", "."))
+                except:
+                    costo_envio_real = 0
+                try:
+                    dia_entrega = (
+                        pd.to_datetime(dia_entrega_raw, format="%d/%m/%Y").date()
+                        if dia_entrega_raw else None
+                    )
                 except:
                     dia_entrega = None
+                try:
+                    """ 04/09/2025 17:51:08 """
 
-                total_excel = (
-                    row.get("total") or row.get("Total") or row.get("Subtotal") or 0
+                    hora_envio = (
+                        datetime.strptime(hora_envio_raw, "%d/%m/%Y %H:%M:%S")
+                        if hora_envio_raw else None
+                    )
+                except:
+                    hora_envio = None
+
+                subtotal = (
+                    row.get("Subtotal") or 0
                 )
                 try:
-                    total_excel = float(str(total_excel).replace("$", "").replace(".", "").replace(",", "."))
+                    subtotal = float(str(subtotal).replace("$", "").replace(".", "").replace(",", "."))
                 except:
-                    total_excel = 0
+                    subtotal = 0
 
                 order = Order(
                     nombre_completo=nombre,
@@ -356,10 +388,13 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                     direccion=str(row.get("Direccion", "")),
                     comentario=str(row.get("Comentario", "")),
                     dia_entrega=dia_entrega,
-                    envio_cobrado=total_excel,
-                    costo_envio_real=0,
+                    dia_pedido=hora_envio,
+                    envio_cobrado=int(envio_cobrado),
+                    costo_envio_real=int(costo_envio_real),
                     confirmado=str(row.get("confirmado y pagado", "")).strip().upper()=="TRUE",
                     entregado=str(row.get("entregado", "")).strip().upper()=="TRUE",
+                    subtotal=int(subtotal),
+                    total=int(subtotal + envio_cobrado),
                 )
 
                 s.add(order)
@@ -367,11 +402,11 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                 s.refresh(order)
 
                 op = OrderProduct(
-                    codigo="GENERIC",
+                    codigo="GENERICO",
                     order_id=order.id,
                     nombre="PRODUCTO GENERICO",
                     cantidad=1,
-                    precio_unitario=total_excel
+                    precio_unitario=int(subtotal)
                 )
                 s.add(op)
                 s.commit()

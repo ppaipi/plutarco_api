@@ -210,7 +210,7 @@ function renderList(list) {
     try {
       // PUT directo para actualizar orden
       {
-        const path = `/products/${p.id}/order`; // sin slash final
+        const path = `products/${p.id}/order`; // sin slash final
         const headers = {};
         if(token) headers['x-api-key'] = token;
         headers['Content-Type'] = 'application/json';
@@ -315,7 +315,7 @@ async function moveProduct(productId, direction) {
   try {
     // GUARDA SOLO LOS DOS QUE CAMBIARON
     {
-      const pathA = `/products/${sorted[index].id}/order`; // sin slash final
+      const pathA = `products/${sorted[index].id}/order`; // sin slash final
       const headersA = {}; if(token) headersA['x-api-key'] = token; headersA['Content-Type'] = 'application/json';
       const optsA = { method: 'PUT', headers: headersA, body: JSON.stringify({ orden: sorted[index].orden }) };
       const resA = await fetch(API_URL + pathA, optsA);
@@ -323,7 +323,7 @@ async function moveProduct(productId, direction) {
     }
 
     {
-      const pathB = `/products/${sorted[newIndex].id}/order`; // sin slash final
+      const pathB = `products/${sorted[newIndex].id}/order`; // sin slash final
       const headersB = {}; if(token) headersB['x-api-key'] = token; headersB['Content-Type'] = 'application/json';
       const optsB = { method: 'PUT', headers: headersB, body: JSON.stringify({ orden: sorted[newIndex].orden }) };
       const resB = await fetch(API_URL + pathB, optsB);
@@ -426,7 +426,7 @@ fileJson.addEventListener('change', async (e)=>{
   const fd = new FormData(); fd.append('file', f);
   try{
     {
-      const path = '/products/import-habilitados'; // sin slash final
+      const path = 'products/import-habilitados'; // sin slash final
       const headers = {}; if(token) headers['x-api-key'] = token;
       const opts = { method: 'POST', headers, body: fd };
       const res = await fetch(API_URL + path, opts);
@@ -445,7 +445,7 @@ fileCsv.addEventListener('change', async (e)=>{
   const fd = new FormData(); fd.append('file', f);
   try{
     {
-      const path = '/products/import-ordenes'; // sin slash final
+      const path = 'products/import-ordenes'; // sin slash final
       const headers = {}; if(token) headers['x-api-key'] = token;
       const opts = { method: 'POST', headers, body: fd };
       const res = await fetch(API_URL + path, opts);

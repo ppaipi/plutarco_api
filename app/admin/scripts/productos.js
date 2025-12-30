@@ -10,21 +10,19 @@
    - POST /products/import-ordenes (FormData file)
 */
 
-const API_BASE = ""; // ruta relativa
+import API_URL from "./config.js";
 
 // state
 let token = localStorage.getItem("token") || null;
+if (!token) {
+  window.location.href = "/login/";
+}
 let products = [];
 let visibleCount = 50;
 const PAGE_STEP = 50;
 let currentEditCodigo = null;
 let currentImgLink = null;
 
-// DOM
-const loginScreen = document.getElementById("login-screen");
-const dashboard = document.getElementById("dashboard");
-const btnLogin = document.getElementById("btn-login");
-const loginMsg = document.getElementById("login-msg");
 const btnLogout = document.getElementById("btn-logout");
 const listEl = document.getElementById("list");
 const statsEl = document.getElementById("stats");
@@ -72,12 +70,6 @@ function setToken(t){
   if(t) localStorage.setItem('token', t);
   else localStorage.removeItem('token');
 }
-
-// show/hide screens
-function showLogin(){ window.location.href = '/login'; }
-function showDashboard(){ loginScreen.classList.add("hidden"); dashboard.classList.remove("hidden"); btnLogout.hidden = false }
-
-const API_URL = "https://api.plutarcoalmacen.com.ar/";
 
 // Logout
 btnLogout.addEventListener('click', ()=>{
@@ -464,4 +456,4 @@ loadMoreBtn.addEventListener('click', ()=> { visibleCount += PAGE_STEP; renderFi
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 // Check token on init - rediijo a login si no hay token
-if(token){ showDashboard(); loadProducts(true); } else { window.location.href = API_URL + 'login/'; }
+loadProducts(true);

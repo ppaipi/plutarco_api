@@ -1,7 +1,6 @@
 // login.js - Lógica de login independiente
 
-const API_URL = "https://api.plutarcoalmacen.com.ar/";
-
+import API_URL from "./config.js";
 const btnLogin = document.getElementById("btn-login");
 const loginMsg = document.getElementById("login-msg");
 const loginUser = document.getElementById("login-user");
@@ -62,10 +61,14 @@ btnLogin.addEventListener("click", async () => {
     // Mensaje de éxito
     loginMsg.textContent = "✓ Login exitoso, redirigiendo...";
     loginMsg.classList.add("success");
-
+    previousPage = document.referrer;
     // Redirigir a productos después de 500ms
     setTimeout(() => {
-      window.location.href = "/productos";
+      if (previousPage && previousPage.includes("plutarco")) {
+        window.location.href =  previousPage;
+      } else {
+        window.location.href = "/productos/";
+      }
     }, 500);
   } catch (e) {
     loginMsg.textContent = e.message || "Error en login";

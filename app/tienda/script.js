@@ -761,6 +761,10 @@ function initAutocomplete() {
 
   autocomplete.setBounds(bounds);
   autocomplete.setOptions({ strictBounds: false }); 
+  const inputField = document.getElementById('address');
+  inputField.addEventListener('input', () => {
+    cargandoEnvio(true);
+  });
 
   // Cuando el usuario elige una dirección de la lista
   autocomplete.addListener('place_changed', () => {
@@ -806,6 +810,14 @@ function actualizarEnvioConCache(destino) {
     updateCart();
   });
 }
+function cargandoEnvio(boolean) {
+  if(boolean == calculandoEnvio) {
+    return;
+  }
+  calculandoEnvio = boolean;
+  if (boolean)
+    mostrarMensajeEnvio('', 'black');
+}
 
 function calcularCostoEnvio(destino, subtotal, callback) {
   if (!destino || destino.trim().toUpperCase() === 'A ACORDAR') {
@@ -822,8 +834,7 @@ function calcularCostoEnvio(destino, subtotal, callback) {
   }
 
   // Mostrar indicador de carga
-  calculandoEnvio = true;
-  mostrarMensajeEnvio('', 'black');
+  cargandoEnvio(true);
 
   const service = new google.maps.DistanceMatrixService();
 
@@ -832,7 +843,7 @@ function calcularCostoEnvio(destino, subtotal, callback) {
     destinations: [destino],
     travelMode: 'DRIVING'
   }, (response, status) => {
-    calculandoEnvio = false;
+    cargandoEnvio(false);
 
     if (status !== 'OK' || !response.rows?.[0]?.elements?.[0]) {
       callback(0, 'Error al calcular distancia.', 'red');
@@ -865,7 +876,11 @@ function calcularCostoEnvio(destino, subtotal, callback) {
     }
 
     costo = rango.price;
-    msg = `Envío ${kmRedondeado} km — $${costo}`;
+    if(costo === 0){
+      msg = `Felicidades! Tenés envío gratis!! (${kmRedondeado} km)`;
+    } else {
+      msg = `Envío ${kmRedondeado} km — $${costo}`;
+    }
     color = 'green';
 
     // Guardar en cache

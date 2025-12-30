@@ -23,7 +23,9 @@ const btnDeleteOrder = document.getElementById("btn-delete-order");
 const fNombre = document.getElementById("o-nombre");
 const fCorreo = document.getElementById("o-correo");
 const fTelefono = document.getElementById("o-telefono");
+const fTelefonoWpp = document.getElementById("o-telefono-wpp");
 const fDireccion = document.getElementById("o-direccion");
+const fDireccionMaps = document.getElementById("o-direccion-maps");
 const fDia = document.getElementById("o-dia");
 const fEnvio = document.getElementById("o-envio");
 const fCostoEnvio = document.getElementById("o-costo-envio");
@@ -52,7 +54,7 @@ if (btnTheme) btnTheme.onclick = () => {
 };
 
 // Base API URL (usar absoluta para evitar redirecciones http/https)
-const API_URL = "https://plutarco-api.fly.dev/";
+import API_URL from "./config.js";
 
 // Check token on init - redirect to login if not authenticated
 if (!localStorage.getItem('token')) {
@@ -243,6 +245,8 @@ async function openEdit(order){
   if (fNombre) fNombre.value = order.nombre_completo || '';
   if (fCorreo) fCorreo.value = order.correo || '';
   if (fTelefono) fTelefono.value = order.telefono || '';
+  if (fTelefonoWpp) fTelefonoWpp.href = `https://wa.me/${encodeURIComponent(order.telefono || '')}`;
+  if (fDireccionMaps) fDireccionMaps.href = `https://www.google.com/maps/search/${encodeURIComponent(order.direccion || '')}`;
   if (fDireccion) fDireccion.value = order.direccion || '';
   if (fDia) fDia.value = order.dia_entrega || '';
   if (fEnvio) fEnvio.value = order.envio_cobrado || 0;
@@ -280,6 +284,7 @@ async function openEdit(order){
   }
   renderItemsTable();
   openModalUI();
+  modal.scrollTo(0,0);
 }
 
 function openModalUI(){
@@ -633,7 +638,7 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
 }
 const btnLogout = document.getElementById("btn-logout");
 btnLogout.addEventListener('click', ()=>{
-  setToken(null);
+  localStorage.removeItem('token');
   window.location.href = '/login';
 });
 // pagination & filters

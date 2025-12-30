@@ -16,7 +16,7 @@ const msgConfig = document.getElementById("config-msg");
 const msgDeliveryDays = document.getElementById("delivery-days-msg");
 const msgCategoryOrder = document.getElementById("category-order-msg");
 
-const API_URL = window.location.origin + "/config";
+import API_URL from "./config.js";
 
 function showMsg(el, text, ok = true) {
   if (!el) return;
@@ -60,7 +60,7 @@ async function fetchConfig() {
     const tokenValue = localStorage.getItem('token');
     if (tokenValue) headers['x-api-key'] = tokenValue;
 
-    const response = await fetch(API_URL + "/list", { method: 'GET', headers });
+    const response = await fetch(API_URL + "config/list", { method: 'GET', headers });
     if(!response.ok){
       const txt = await response.text().catch(()=> '');
       throw new Error(txt || response.status);
@@ -144,7 +144,7 @@ async function saveConfig() {
 
   try{
     const headers = {'Content-Type':'application/json', 'x-api-key': tokenValue};
-    const response = await fetch(API_URL + '/envio', {method:'PUT', headers, body: JSON.stringify(payload)});
+    const response = await fetch(API_URL + 'config/envio', {method:'PUT', headers, body: JSON.stringify(payload)});
     if(!response.ok){
       const txt = await response.text().catch(()=> '');
       throw new Error(txt || response.status);

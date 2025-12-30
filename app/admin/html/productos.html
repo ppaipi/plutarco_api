@@ -1,9 +1,10 @@
 <!doctype html>
 <html lang="es">
 <head>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="UTF-8">
   <title>Panel Admin — Plutarco</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/styles/styles.css">
 </head>
 <body>
 <div id="app">
@@ -23,28 +24,8 @@
 
 <main class="container">
 
-  <!-- LOGIN -->
-  <div id="login-screen" class="card center">
-    <h2>Ingresar al panel</h2>
-
-    <div class="form-group">
-      <label for="login-user">Usuario</label>
-      <input id="login-user" class="input" placeholder="Usuario" autocomplete="username">
-    </div>
-
-    <div class="form-group">
-      <label for="login-pass">Contraseña</label>
-      <input id="login-pass" class="input" type="password" placeholder="Contraseña" autocomplete="current-password">
-    </div>
-
-    <button id="btn-login" class="btn primary full">Entrar</button>
-
-    <div id="login-msg" class="msg"></div>
-  </div>
-
-
   <!-- DASHBOARD -->
-  <div id="dashboard" class="hidden">
+  <div id="dashboard">
 
     <section class="controls card">
       <div class="left">
@@ -128,6 +109,6 @@
 
 
 </div>
-<script src="/static/productos.js?v=5"></script>
+<script type="module" src="/static/scripts/productos.js?v=5"></script>
 </body>
 </html>

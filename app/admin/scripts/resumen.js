@@ -1,4 +1,4 @@
-const API_BASE = "https://plutarco-api.fly.dev/";
+import API_URL from "./config.js";
 const API_KEY = localStorage.getItem("token");
 const monthSelector = document.getElementById("month-selector");
 
@@ -46,7 +46,7 @@ async function fetchOrders() {
   try {
     const headers = {};
     if (API_KEY) headers['x-api-key'] = API_KEY;
-    const response = await fetch(API_BASE + "orders/list", { method: 'GET', headers });
+    const response = await fetch(API_URL + "orders/list", { method: 'GET', headers });
 
 
     if (!response.ok) {

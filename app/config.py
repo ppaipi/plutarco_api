@@ -9,7 +9,7 @@ os.makedirs(IMAGES_DIR, exist_ok=True)
 PEDIDOS_PATH = "app/admin/pedidos/pedidos.html"
 
 PRODUCTOS_PATH = "app/admin/productos/productos.html"
-
+DIR_WEB = "app/admin/html"
 ADMIN_USER = os.getenv("ADMIN_USER")
 ADMIN_PASS = os.getenv("ADMIN_PASS")
 API_KEY = os.getenv("API_KEY")

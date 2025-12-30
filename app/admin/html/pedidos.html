@@ -4,7 +4,7 @@
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Pedidos — Panel Admin Plutarco</title>
-<link rel="stylesheet" href="/static/style.css">
+<link rel="stylesheet" href="/static/styles/styles.css">
 </head>
 <body>
 
@@ -85,8 +85,8 @@
     <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;">
       <label>Nombre<br><input id="o-nombre" class="input"></label>
       <label>Email<br><input id="o-correo" class="input"></label>
-      <label>Teléfono<br><input id="o-telefono" class="input"></label>
-      <label>Dirección<br><input id="o-direccion" class="input"></label>
+      <label>Teléfono (<a href="#" id="o-telefono-wpp" target="_blank">wpp</a>)<br><input id="o-telefono" class="input"></label>
+      <label>Dirección (<a href="#" id="o-direccion-maps" target="_blank">maps</a>)<br><input id="o-direccion" class="input"></label>
       <label>Día entrega<br><input id="o-dia" type="date" class="input"></label>
       <label>Envío cobrado<br><input id="o-envio" type="number" class="input"></label>
       <label>Costo envío real<br><input id="o-costo-envio" type="number" class="input"></label>
@@ -131,7 +131,7 @@
   </div>
 </div>
 
-<script src="/static/pedidos.js?v=50"></script>
+<script type="module" src="/static/scripts/pedidos.js?v=50"></script>
 </div>
 </body>
 </html>

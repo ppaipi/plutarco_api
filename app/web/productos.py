@@ -3,8 +3,8 @@ from fastapi.responses import FileResponse
 import os
 
 router = APIRouter()
-BASE = "app/admin"
+from app.config import DIR_WEB
 
 @router.get("/")
 async def productos_page():
-    return FileResponse(os.path.join(BASE, "productos.html"))
+    return FileResponse(os.path.join(DIR_WEB, "productos.html"))

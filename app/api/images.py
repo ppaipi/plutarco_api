@@ -84,4 +84,11 @@ def delete_image(filename: str):
     if not os.path.exists(path):
         raise HTTPException(404, "Imagen no encontrada")
     os.remove(path)
+    with get_session() as s:
+        stmt = select(Product).where(Product.imagen_url == f"/images/{filename}")
+        productos = s.exec(stmt).all()
+        for prod in productos:
+            prod.imagen_url = None
+            s.add(prod)
+        s.commit()
     return

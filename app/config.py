@@ -1,18 +1,44 @@
 import os
 from dotenv import load_dotenv
 
+# ===============================
+# ENV
+# ===============================
 load_dotenv()
 
-IMAGES_DIR = "/data/images"
+# ===============================
+# ENTORNO (Fly vs Local)
+# ===============================
+IS_FLY = os.getenv("FLY_APP_NAME") is not None
+
+if IS_FLY:
+    BASE_DATA_DIR = "/data"
+else:
+    BASE_DATA_DIR = os.path.join(os.getcwd(), "data")
+
+# ===============================
+# DIRECTORIOS
+# ===============================
+IMAGES_DIR = os.path.join(BASE_DATA_DIR, "images")
 os.makedirs(IMAGES_DIR, exist_ok=True)
 
-PEDIDOS_PATH = "app/admin/pedidos/pedidos.html"
-
+# ===============================
+# WEB / HTML
+# ===============================
 PRODUCTOS_PATH = "app/admin/productos/productos.html"
 DIR_WEB = "app/admin/html"
+DIR_TIENDA = "app/tienda"
+
+# ===============================
+# AUTH / SECURITY
+# ===============================
 ADMIN_USER = os.getenv("ADMIN_USER")
 ADMIN_PASS = os.getenv("ADMIN_PASS")
 API_KEY = os.getenv("API_KEY")
+
+# ===============================
+# RUTAS PUBLICAS
+# ===============================
 PUBLIC_PATHS = [
     "/products",
     "/products/enabled",
@@ -20,13 +46,16 @@ PUBLIC_PATHS = [
     "/images/",
     "/tienda",
     "/",
-    "/orders",
+    "/orders",  # ⚠️ solo POST público, subrutas protegidas
 ]
+
+# ===============================
+# RUTAS PROTEGIDAS
+# ===============================
 PROTECTED_PATHS = [
-    "/products/import",  # productos públicos (categorías/subcategorías no requieren API KEY)
-    "/orders/",  # proteger subrutas (ej. /orders/1, /orders/import-excel) pero permitir POST a /orders
-    "/config/envio",  # Proteger solo la API de config, no el HTML
+    "/products/import",
+    "/orders/",
+    "/config/envio",
     "/images/delete/",
     "/images/upload/",
 ]
-BASE = "app/admin"

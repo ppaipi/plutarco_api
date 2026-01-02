@@ -3,15 +3,34 @@ from fastapi import Form, UploadFile, File
 from typing import List, Optional
 from pydantic import BaseModel
 from app.models import Product
-from sqlmodel import select
+from sqlmodel import select, delete
 from app.database import get_session
 import pandas as pd
 import io
 from app.crud import (
     get_product_by_codigo,
-    update_or_create_product_by_data,
+    update_product_from_data,
     toggle_product_habilitado,
 )
+
+def get_product_for_import(session, product_id: Optional[str] = None, codigo: Optional[str] = None):
+    """
+    Prioridad:
+    1) Buscar por ID interno (excel)
+    2) Fallback: buscar por codigo
+    """
+    if product_id:
+        try:
+            return session.get(Product, int(product_id))
+        except ValueError:
+            pass
+
+    if codigo:
+        return session.exec(
+            select(Product).where(Product.codigo == codigo)
+        ).first()
+
+    return None
 
 def parse_precio(valor):
     # adaptalo a tu formato: si viene "1.234,56" o "1234.56"
@@ -74,12 +93,15 @@ async def import_products(file: UploadFile = File(...)):
 
     with get_session() as session:
         for _, row in df.iterrows():
-            codigo = str(row.get("CODIGO BARRA", "")).strip() or str(row.get("ID", "")).strip()
+
+            product_id = str(row.get("ID", "")).strip() or None
+            codigo = str(row.get("CODIGO BARRA", "")).strip()
             nombre = (
                 str(row.get("DESCRIPCION LARGA", "")).strip()
                 or str(row.get("DESCRIPCION", "")).strip()
             )
-            if not codigo or not nombre:
+
+            if not nombre:
                 skipped += 1
                 continue
 
@@ -93,15 +115,39 @@ async def import_products(file: UploadFile = File(...)):
                 "proveedor": str(row.get("PROVEEDOR", "")),
             }
 
-            existing = session.exec(
-                select(Product).where(Product.codigo == codigo)
-            ).first()
+            existing = get_product_for_import(
+                session,
+                product_id=product_id,
+                codigo=codigo
+            )
 
-            update_or_create_product_by_data(session, data)
-            created += 1 if not existing else 0
-            updated += 1 if existing else 0
+            if existing:
+                update_product_from_data(existing, data)
+                session.add(existing)
+                updated += 1
+            else:
+                p = Product(
+                    codigo=data["codigo"],
+                    nombre=data["nombre"],
+                    descripcion=data["descripcion"],
+                    categoria=data["categoria"],
+                    subcategoria=data["subcategoria"],
+                    precio=float(data["precio"] or 0.0),
+                    proveedor=data["proveedor"],
+                    habilitado=False,
+                    orden=None
+                )
+                session.add(p)
+                created += 1
 
-    return {"created": created, "updated": updated, "skipped": skipped}
+        session.commit()
+
+    return {
+        "created": created,
+        "updated": updated,
+        "skipped": skipped
+    }
+
 
 
 # -------------------------
@@ -209,3 +255,23 @@ def api_get_subcategories():
     except Exception as e:
         print("Error loading subcategories:", e)
         return []
+    
+@router.delete("/delete/all")
+def delete_all_products():
+    try:
+        with get_session() as s:
+            # contar antes
+            total = s.exec(select(Product)).all()
+            deleted_count = len(total)
+
+            # borrar todo
+            s.exec(delete(Product))
+            s.commit()
+
+            return {
+                "deleted": deleted_count
+            }
+
+    except Exception as e:
+        print("Error deleting all products:", e)
+        raise HTTPException(status_code=500, detail="Error deleting all products")

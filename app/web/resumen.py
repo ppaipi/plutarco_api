@@ -6,5 +6,5 @@ router = APIRouter()
 from app.config import DIR_WEB
 
 @router.get("/")
-async def productos_page():
+async def resumen_page():
     return FileResponse(os.path.join(DIR_WEB, "resumen.html"))

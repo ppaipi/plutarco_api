@@ -48,42 +48,20 @@ def update_product_full(session, codigo: str, data: dict):
     session.refresh(prod)
     return prod
 
-def update_or_create_product_by_data(session, data: dict):
+def update_product_from_data(product: Product, data: dict):
     """
-    Recibe un dic con keys: codigo, nombre, descripcion, categoria, subcategoria, precio, proveedor
-    Si existe por codigo -> actualiza (sin tocar orden/habilitado). Si no existe -> crea (orden=None, habilitado=True)
+    Actualiza SOLO campos editables.
+    NO toca id, orden ni habilitado.
     """
-    codigo = str(data.get("codigo","")).strip()
-    if not codigo:
-        return None
-    existing = get_product_by_codigo(session, codigo)
-    if existing:
-        # construir dict con los campos que actualizamos
-        update_data = {
-            "nombre": data.get("nombre", existing.nombre),
-            "descripcion": data.get("descripcion", existing.descripcion),
-            "categoria": data.get("categoria", existing.categoria),
-            "subcategoria": data.get("subcategoria", existing.subcategoria),
-            "precio": float(data.get("precio", existing.precio or 0.0)),
-            "proveedor": data.get("proveedor", existing.proveedor or "")
-        }
-        return update_product_full(session, codigo, update_data)
-    else:
-        p = Product(
-            codigo = codigo,
-            nombre = data.get("nombre",""),
-            descripcion = data.get("descripcion",""),
-            categoria = data.get("categoria",""),
-            subcategoria = data.get("subcategoria",""),
-            precio = float(data.get("precio", 0.0)),
-            proveedor = data.get("proveedor",""),
-            habilitado = data.get("habilitado", False),  # por defecto true si se crea
-            orden = data.get("orden", None)
-        )
-        session.add(p)
-        session.commit()
-        session.refresh(p)
-        return p
+    if data.get("codigo"):
+        product.codigo = data["codigo"]
+
+    product.nombre = data.get("nombre", product.nombre)
+    product.descripcion = data.get("descripcion", product.descripcion)
+    product.categoria = data.get("categoria", product.categoria)
+    product.subcategoria = data.get("subcategoria", product.subcategoria)
+    product.precio = float(data.get("precio", product.precio or 0.0))
+    product.proveedor = data.get("proveedor", product.proveedor or "")
 
 def toggle_product_habilitado(session, product_id: int = None, codigo: str = None, habilitado: bool = None):
     """

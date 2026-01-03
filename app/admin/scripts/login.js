@@ -1,26 +1,22 @@
-// login.js - Lógica de login independiente
+import API_URL, { PREVIOUS_PAGE } from "./config.js";
 
-import API_URL from "./config.js";
 const btnLogin = document.getElementById("btn-login");
 const loginMsg = document.getElementById("login-msg");
 const loginUser = document.getElementById("login-user");
 const loginPass = document.getElementById("login-pass");
-const btnTheme = document.getElementById("theme-toggle");
 
-// === MODO OSCURO ===
-const savedTheme = localStorage.getItem("theme");
-if (savedTheme === "dark") {
-  document.documentElement.classList.add("dark");
-  btnTheme.textContent = "☀️";
+if (!btnLogin) {
+  console.warn("login.js cargado sin botón de login");
 }
 
-btnTheme.addEventListener("click", () => {
-  const isDark = document.documentElement.classList.toggle("dark");
-  btnTheme.textContent = isDark ? "☀️" : "🌙";
-  localStorage.setItem("theme", isDark ? "dark" : "light");
-});
+function isSafeInternalPath(path) {
+  return (
+    typeof path === "string" &&
+    path.startsWith("/") &&
+    !path.startsWith("//")
+  );
+}
 
-// === LOGIN ===
 btnLogin.addEventListener("click", async () => {
   loginMsg.textContent = "";
   loginMsg.classList.remove("success");
@@ -30,7 +26,6 @@ btnLogin.addEventListener("click", async () => {
 
   if (!user || !pass) {
     loginMsg.textContent = "Completá usuario y contraseña";
-    return;
   }
 
   btnLogin.disabled = true;
@@ -43,6 +38,9 @@ btnLogin.addEventListener("click", async () => {
 
     const res = await fetch(API_URL + "login/auth/", {
       method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
       body: form,
     });
 
@@ -58,18 +56,20 @@ btnLogin.addEventListener("click", async () => {
     // Guardar token
     localStorage.setItem("token", data.access_token);
 
-    // Mensaje de éxito
     loginMsg.textContent = "✓ Login exitoso, redirigiendo...";
     loginMsg.classList.add("success");
-    previousPage = document.referrer;
-    // Redirigir a productos después de 500ms
+
+    // limpiar previous_page
+    sessionStorage.removeItem("previous_page");
+
     setTimeout(() => {
-      if (previousPage && previousPage.includes("plutarco")) {
-        window.location.href =  previousPage;
+      if (isSafeInternalPath(PREVIOUS_PAGE)) {
+        window.location.href = PREVIOUS_PAGE;
       } else {
         window.location.href = "/productos/";
       }
     }, 500);
+
   } catch (e) {
     loginMsg.textContent = e.message || "Error en login";
     btnLogin.disabled = false;
@@ -77,11 +77,11 @@ btnLogin.addEventListener("click", async () => {
   }
 });
 
-// Permitir enter en los inputs
-loginUser.addEventListener("keypress", (e) => {
+// Enter UX
+loginUser.addEventListener("keydown", (e) => {
   if (e.key === "Enter") loginPass.focus();
 });
 
-loginPass.addEventListener("keypress", (e) => {
+loginPass.addEventListener("keydown", (e) => {
   if (e.key === "Enter") btnLogin.click();
 });

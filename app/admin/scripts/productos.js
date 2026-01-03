@@ -11,12 +11,9 @@
 */
 
 import API_URL from "./config.js";
-
+import { TOKEN } from "./config.js";
 // state
-let token = localStorage.getItem("token") || null;
-if (!token) {
-  window.location.href = "/login/";
-}
+let token = TOKEN;
 let products = [];
 let visibleCount = 50;
 const PAGE_STEP = 50;
@@ -47,35 +44,7 @@ const btnUploadJson = document.getElementById("btn-upload-json");
 const fileCsv = document.getElementById("file-csv");
 const btnUploadCsv = document.getElementById("btn-upload-csv");
 
-// === MODO OSCURO ===
-const btnTheme = document.getElementById("theme-toggle");
 
-// cargar tema guardado
-const savedTheme = localStorage.getItem("theme");
-if (savedTheme === "dark") {
-  document.documentElement.classList.add("dark");
-  btnTheme.textContent = "☀️";
-}
-
-// evento para cambiar el tema
-btnTheme.addEventListener("click", () => {
-  const isDark = document.documentElement.classList.toggle("dark");
-  btnTheme.textContent = isDark ? "☀️" : "🌙";
-  localStorage.setItem("theme", isDark ? "dark" : "light");
-});
-
-// token helpers
-function setToken(t){
-  token = t;
-  if(t) localStorage.setItem('token', t);
-  else localStorage.removeItem('token');
-}
-
-// Logout
-btnLogout.addEventListener('click', ()=>{
-  setToken(null);
-  window.location.href = '/login';
-});
 
 /* ------------------ PRODUCTS ------------------ */
 async function loadProducts(force=false){
@@ -398,7 +367,7 @@ fileExcel.addEventListener('change', async (e)=>{
   try{
     // POST FormData para import
     {
-      const path = 'products/import'; // sin slash final
+      const path = 'products/import-excel'; // sin slash final
       const headers = {};
       if(token) headers['x-api-key'] = token;
       const opts = { method: 'POST', headers, body: fd };
@@ -437,7 +406,7 @@ fileCsv.addEventListener('change', async (e)=>{
   const fd = new FormData(); fd.append('file', f);
   try{
     {
-      const path = 'products/import-ordenes'; // sin slash final
+      const path = 'products/import-orders'; // sin slash final
       const headers = {}; if(token) headers['x-api-key'] = token;
       const opts = { method: 'POST', headers, body: fd };
       const res = await fetch(API_URL + path, opts);

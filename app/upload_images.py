@@ -4,7 +4,7 @@ import requests
 # ================= CONFIG =================
 API_URL_BASE = "https://plutarco-api.fly.dev/images/upload"
 API_KEY = "2006f04013-pppp-plutarco-supersecretk3y"
-IMG_DIR = "app/PRODUCTOS"
+IMG_DIR = "PRODUCTOS"
 # ==========================================
 
 if not os.path.isdir(IMG_DIR):

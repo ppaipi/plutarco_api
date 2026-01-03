@@ -172,7 +172,7 @@ function cargarDiasEntrega() {
   let fechaIterada = new Date();
   const opciones = [];
 
-  while (opciones.length < 4) {
+  while (opciones.length < 2) {
     const diaSemana = fechaIterada.getDay();
     const diaConfig = diasValidos.find(d => d.weekday === diaSemana);
 

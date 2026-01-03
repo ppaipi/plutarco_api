@@ -20,8 +20,10 @@ def get_product_by_codigo(session, codigo: str) -> Optional[Product]:
 def get_product_by_id(session, product_id: int) -> Optional[Product]:
     return session.get(Product, product_id)
 
-def get_product_by_nombre(session, nombre: str) -> Optional[Product]:
-    return session.exec(select(Product).where(Product.nombre == nombre)).first()
+def get_product_by_nombre(session, nombre: str):
+    return session.exec(
+        select(Product).where(Product.nombre == nombre)
+    ).first()
 
 def update_product_full(session, codigo: str, data: dict):
     """

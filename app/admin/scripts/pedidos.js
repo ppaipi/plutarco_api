@@ -55,11 +55,10 @@ if (btnTheme) btnTheme.onclick = () => {
 
 // Base API URL (usar absoluta para evitar redirecciones http/https)
 import API_URL from "./config.js";
+import { TOKEN } from "./config.js";
+let token = TOKEN;
 
-// Check token on init - redirect to login if not authenticated
-if (!localStorage.getItem('token')) {
-  window.location.href = API_URL + 'login/';
-}
+
 
 // state
 let orders = [];
@@ -80,7 +79,6 @@ async function loadOrders(){
     if (listEl) listEl.innerHTML = `<div class="card">Cargando pedidos...</div>`;
 
     const headers = {};
-    const token = localStorage.getItem('token');
     if (token) headers['x-api-key'] = token;
 
     const res = await fetch(API_URL + "orders/list", { method: 'GET', headers });
@@ -202,7 +200,6 @@ async function confirmAndDelete(orderId){
     {
       const path = `orders/${orderId}`;
       const headers = {};
-      const token = localStorage.getItem('token');
       if (token) headers['x-api-key'] = token;
       const res = await fetch(API_URL + path, { method: 'DELETE', headers });
       if(!res.ok){
@@ -262,7 +259,6 @@ async function openEdit(order){
     const r = await (async ()=>{
       const path = `orders/${order.id}`;
       const headers = {};
-      const token = localStorage.getItem('token');
       if (token) headers['x-api-key'] = token;
       const res = await fetch(API_URL + path, { method: 'GET', headers });
       if(!res.ok){
@@ -305,7 +301,6 @@ async function get_image_link(codigo){
     const res = await (async ()=>{
       const path = `products/by-codigo/${encodeURIComponent(codigo)}`;
       const headers = {};
-      const token = localStorage.getItem('token');
       if (token) headers['x-api-key'] = token;
       const r = await fetch(API_URL + path, { method: 'GET', headers });
       if(!r.ok){
@@ -408,7 +403,6 @@ if (productSearch) {
         // prefer server search endpoint (fetch local)
         const path = `products/search?q=${encodeURIComponent(q)}&limit=12`;
         const headers = {};
-        const token = localStorage.getItem('token');
         if (token) headers['x-api-key'] = token;
         const r = await fetch(API_URL + path, { method: 'GET', headers });
         if(!r.ok) throw new Error(await r.text().catch(()=>r.status));
@@ -490,7 +484,6 @@ if (btnImportExcel && fileExcel) {
       {
         const path = 'orders/import-excel';
         const headers = {};
-        const token = localStorage.getItem('token');
         if (token) headers['x-api-key'] = token;
         const res = await fetch(API_URL + path, { method: 'POST', headers, body: fd });
         if(!res.ok){
@@ -537,7 +530,6 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
       {
         const path = `orders/${editingOrderId}`;
         const headers = { 'Content-Type': 'application/json' };
-        const token = localStorage.getItem('token');
         if (token) headers['x-api-key'] = token;
         const res = await fetch(API_URL + path, { method: 'PUT', headers, body: JSON.stringify(fullPayload) });
         if(!res.ok){
@@ -563,7 +555,6 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
       {
         const path = 'orders';
         const headers = { 'Content-Type': 'application/json' };
-        const token = localStorage.getItem('token');
         if (token) headers['x-api-key'] = token;
         const res = await fetch(API_URL + path, { method: 'POST', headers, body: JSON.stringify(newPayload) });
         if(!res.ok){
@@ -591,7 +582,6 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
     {
       const path = `orders/${editingOrderId}`;
       const headers = {};
-      const token = localStorage.getItem('token');
       if (token) headers['x-api-key'] = token;
       const res = await fetch(API_URL + path, { method: 'DELETE', headers });
       if(!res.ok){
@@ -636,11 +626,7 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
   // seleccionar automáticamente el último mes
   if (arr.length > 0) select.value = arr[0];
 }
-const btnLogout = document.getElementById("btn-logout");
-btnLogout.addEventListener('click', ()=>{
-  localStorage.removeItem('token');
-  window.location.href = '/login';
-});
+
 // pagination & filters
 if (btnLoadMore) btnLoadMore.addEventListener('click', ()=> { page++; render(); });
 if (search) search.addEventListener('input', ()=> { page = 0; render(); });

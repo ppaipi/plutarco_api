@@ -1,43 +1,11 @@
 import API_URL from "./config.js";
-const API_KEY = localStorage.getItem("token");
+import { TOKEN } from "./config.js";
+let API_KEY = TOKEN;
+
 const monthSelector = document.getElementById("month-selector");
 
 let orders = [];
 
-/* =========================
-   AUTH
-========================= */
-if (!API_KEY) {
-  window.location.href = "/login/";
-}
-
-/* =========================
-   THEME TOGGLE
-========================= */
-const themeToggle = document.getElementById("theme-toggle");
-const html = document.documentElement;
-
-const savedTheme = localStorage.getItem("theme") || "light";
-if (savedTheme === "dark") {
-  html.classList.add("dark");
-  themeToggle.textContent = "☀️";
-}
-
-themeToggle.addEventListener("click", () => {
-  html.classList.toggle("dark");
-  const isDark = html.classList.contains("dark");
-  localStorage.setItem("theme", isDark ? "dark" : "light");
-  themeToggle.textContent = isDark ? "☀️" : "🌙";
-});
-
-/* =========================
-   LOGOUT
-========================= */
-const logoutBtn = document.getElementById("btn-logout");
-logoutBtn.addEventListener("click", () => {
-  localStorage.removeItem("token");
-  window.location.href = "/login/";
-});
 
 /* =========================
    FETCH ORDERS

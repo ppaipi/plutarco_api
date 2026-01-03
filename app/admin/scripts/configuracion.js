@@ -17,6 +17,8 @@ const msgDeliveryDays = document.getElementById("delivery-days-msg");
 const msgCategoryOrder = document.getElementById("category-order-msg");
 
 import API_URL from "./config.js";
+import {TOKEN} from "./config.js";
+let api_key = TOKEN;
 
 function showMsg(el, text, ok = true) {
   if (!el) return;
@@ -37,8 +39,7 @@ function createTariffRow(t = {km: '', price: ''}){
 async function fetchCategoriesLists(){
   try{
     const headers = {};
-    const tokenValue = localStorage.getItem('token');
-    if (tokenValue) headers['x-api-key'] = tokenValue;
+    if (api_key) headers['x-api-key'] = api_key;
 
     const res1 = await fetch(window.location.origin + '/products/categories', { headers });
     const cats = res1.ok ? await res1.json() : [];
@@ -57,8 +58,7 @@ async function fetchCategoriesLists(){
 async function fetchConfig() {
   try {
     const headers = {};
-    const tokenValue = localStorage.getItem('token');
-    if (tokenValue) headers['x-api-key'] = tokenValue;
+    if (api_key) headers['x-api-key'] = api_key;
 
     const response = await fetch(API_URL + "config/list", { method: 'GET', headers });
     if(!response.ok){
@@ -112,9 +112,8 @@ async function fetchConfig() {
 }
 
 async function saveConfig() {
-  const tokenValue = localStorage.getItem('token');
-  if (!tokenValue) {
-    showMsg(msgConfig, "⚠️ Sin token de autenticación. Inicia sesión de nuevo.", false);
+  if (!api_key) {
+    showMsg(msgConfig, "⚠️ Sin API KEY. Inicia sesión de nuevo.", false);
     return;
   }
 
@@ -143,7 +142,7 @@ async function saveConfig() {
   };
 
   try{
-    const headers = {'Content-Type':'application/json', 'x-api-key': tokenValue};
+    const headers = {'Content-Type':'application/json', 'x-api-key': api_key};
     const response = await fetch(API_URL + 'config/envio', {method:'PUT', headers, body: JSON.stringify(payload)});
     if(!response.ok){
       const txt = await response.text().catch(()=> '');
@@ -159,36 +158,6 @@ async function saveConfig() {
 buttonSaveAllConfig.addEventListener("click", saveConfig);
 
 document.addEventListener("DOMContentLoaded", () => {
-  // Verificar si hay token; si no, redirigir a login
-  const savedToken = localStorage.getItem("token");
-  if (!savedToken) {
-    window.location.href = "/login";
-    return;
-  }
-
-  // ===== DARK MODE =====
-  const savedTheme = localStorage.getItem("theme");
-  if (savedTheme === "dark") {
-    document.documentElement.classList.add("dark");
-    if(btnTheme) btnTheme.textContent = "☀️";
-  }
-
-  if (btnTheme) {
-    btnTheme.addEventListener("click", () => {
-      const isDark = document.documentElement.classList.toggle("dark");
-      btnTheme.textContent = isDark ? "☀️" : "🌙";
-      localStorage.setItem("theme", isDark ? "dark" : "light");
-    });
-  }
-
-  // Botón Salir: limpiar localStorage y redirigir a login
-  if (btnLogout) {
-    btnLogout.addEventListener("click", () => {
-      localStorage.clear();
-      window.location.href = "/login";
-    });
-  }
-  
   // add tariff button
   if(btnAddTariff){
     btnAddTariff.addEventListener('click', ()=>{

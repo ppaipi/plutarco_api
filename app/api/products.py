@@ -7,10 +7,13 @@ from sqlmodel import select, delete
 from app.database import get_session
 import pandas as pd
 import io
+import csv
+import json
 from app.crud import (
     get_product_by_codigo,
     update_product_from_data,
     toggle_product_habilitado,
+    get_product_by_nombre
 )
 
 def get_product_for_import(session, product_id: Optional[str] = None, codigo: Optional[str] = None):
@@ -82,7 +85,7 @@ def api_get_by_codigo(codigo: str):
 # -------------------------
 # IMPORTAR PRODUCTOS
 # -------------------------
-@router.post("/import")
+@router.post("/import-excel", status_code=status.HTTP_201_CREATED)
 async def import_products(file: UploadFile = File(...)):
     content = await file.read()
     df = pd.read_excel(io.BytesIO(content), engine="openpyxl").fillna("")
@@ -149,6 +152,101 @@ async def import_products(file: UploadFile = File(...)):
     }
 
 
+@router.post("/import-habilitados", status_code=status.HTTP_201_CREATED)
+async def import_habilitados(file: UploadFile = File(...)):
+    updated = 0
+    skipped = 0
+
+    try:
+        content = await file.read()
+
+        # Parsear JSON
+        codigos = json.loads(content)
+
+        if not isinstance(codigos, list):
+            raise HTTPException(
+                status_code=400,
+                detail="El archivo debe contener una lista JSON de códigos"
+            )
+
+        with get_session() as session:
+            for codigo in codigos:
+                codigo = str(codigo).strip()
+                if not codigo:
+                    skipped += 1
+                    continue
+
+                product = get_product_by_codigo(session, codigo)
+
+                if product:
+                    if not product.habilitado:
+                        product.habilitado = True
+                        session.add(product)
+                        updated += 1
+                else:
+                    skipped += 1
+
+            session.commit()
+
+        return {
+            "updated": updated,
+            "skipped": skipped,
+            "total_received": len(codigos)
+        }
+
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=400,
+            detail="El archivo no es un JSON válido"
+        )
+    except Exception as e:
+        print("Error enabling products from json:", e)
+        raise HTTPException(status_code=500, detail="Error enabling products")
+
+
+@router.post("/import-orders", status_code=status.HTTP_201_CREATED)
+async def import_order_from_csv(file: UploadFile = File(...)):
+    content = await file.read()
+    text = content.decode("utf-8", errors="ignore")
+
+    updated = 0
+    skipped = 0
+
+    reader = csv.reader(io.StringIO(text), delimiter=";")
+
+    with get_session() as session:
+        for row in reader:
+            if len(row) < 2:
+                skipped += 1
+                continue
+
+            try:
+                orden = int(str(row[0]).strip())
+            except ValueError:
+                skipped += 1
+                continue
+
+            nombre = str(row[1]).strip()
+
+            if not nombre:
+                skipped += 1
+                continue
+
+            product = get_product_by_nombre(session, nombre)
+
+            if product:
+                product.orden = orden
+                session.add(product)
+                updated += 1
+            else:
+                skipped += 1
+
+        session.commit()
+
+    return {
+        "updated": updated,
+        "skipped": skipped
+    }
 
 # -------------------------
 # PRODUCTOS – ESTADO

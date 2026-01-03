@@ -5,112 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Login — Panel Admin Plutarco</title>
   <link rel="stylesheet" href="/static/styles/styles.css">
-  <style>
-    body {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      min-height: 100vh;
-      margin: 0;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    }
-    .login-container {
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
-      padding: 40px;
-      width: 100%;
-      max-width: 400px;
-    }
-    .login-container h1 {
-      margin: 0 0 30px 0;
-      text-align: center;
-      color: #333;
-      font-size: 28px;
-    }
-    .login-container .form-group {
-      margin-bottom: 20px;
-    }
-    .login-container label {
-      display: block;
-      margin-bottom: 8px;
-      color: #555;
-      font-weight: 500;
-      font-size: 14px;
-    }
-    .login-container input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 14px;
-      box-sizing: border-box;
-      transition: border-color 0.2s;
-    }
-    .login-container input:focus {
-      outline: none;
-      border-color: #667eea;
-      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-    .login-container button {
-      width: 100%;
-      padding: 12px;
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      border: none;
-      border-radius: 4px;
-      font-size: 16px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    .login-container button:hover {
-      opacity: 0.9;
-    }
-    .login-container button:active {
-      opacity: 0.8;
-    }
-    .login-msg {
-      margin-top: 20px;
-      text-align: center;
-      font-size: 14px;
-      color: #d32f2f;
-      min-height: 20px;
-    }
-    .login-msg.success {
-      color: #388e3c;
-    }
-    .theme-toggle {
-      position: absolute;
-      top: 20px;
-      right: 20px;
-      background: none;
-      border: none;
-      font-size: 24px;
-      cursor: pointer;
-    }
-    .dark {
-      background: #121212;
-    }
-    .dark .login-container {
-      background: #1e1e1e;
-      color: #fff;
-    }
-    .dark .login-container h1 {
-      color: #fff;
-    }
-    .dark .login-container label {
-      color: #aaa;
-    }
-    .dark .login-container input {
-      background: #2a2a2a;
-      color: #fff;
-      border-color: #444;
-    }
-    .dark .login-container input:focus {
-      border-color: #667eea;
-    }
-  </style>
+  <link rel="stylesheet" href="/static/styles/login.css">
 </head>
 <body>
 
@@ -129,11 +24,12 @@
     <input id="login-pass" type="password" placeholder="Tu contraseña" autocomplete="current-password">
   </div>
 
-  <button id="btn-login">Ingresar</button>
+  <button id="btn-login" type="submit">Ingresar</button>
 
   <div id="login-msg" class="login-msg"></div>
 </div>
 
+<script type="module" src="/static/scripts/theme.js"></script>
 <script type="module" src="/static/scripts/login.js?v=1"></script>
 </body>
 </html>

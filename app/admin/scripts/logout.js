@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
   logoutBtn.addEventListener("click", async () => {
     sessionStorage.removeItem("token");
     localStorage.removeItem("token");
+    savePreviousPage();
     window.location.href = "/login/";
   });
 });

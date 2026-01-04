@@ -5,8 +5,10 @@ from datetime import date
 from sqlalchemy import Column
 from sqlalchemy import JSON as SA_JSON
 
+
 class Product(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: str = Field(primary_key=True, index=True)
+
     codigo: str = Field(index=True)
     nombre: str
     descripcion: Optional[str] = ""
@@ -15,10 +17,9 @@ class Product(SQLModel, table=True):
     precio: float = 0.0
     proveedor: Optional[str] = ""
 
-    # Nuevos campos pedidos
-    habilitado: bool = Field(default=True, index=True)   # true = habilitado
-    orden: Optional[int] = Field(default=None, index=True)  # orden de visibilidad (1,2,3,...)
-    imagen_url: str | None = None
+    habilitado: bool = Field(default=True, index=True)
+    orden: Optional[int] = Field(default=None, index=True)
+    imagen_url: Optional[str] = None
 
 class OrderProduct(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

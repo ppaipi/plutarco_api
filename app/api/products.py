@@ -16,17 +16,13 @@ from app.crud import (
     get_product_by_nombre
 )
 
-def get_product_for_import(session, product_id: Optional[str] = None, codigo: Optional[str] = None):
-    """
-    Prioridad:
-    1) Buscar por ID interno (excel)
-    2) Fallback: buscar por codigo
-    """
+def get_product_for_import(session, product_id=None, codigo=None):
     if product_id:
-        try:
-            return session.get(Product, int(product_id))
-        except ValueError:
-            pass
+        product = session.exec(
+            select(Product).where(Product.id == product_id)
+        ).first()
+        if product:
+            return product
 
     if codigo:
         return session.exec(
@@ -34,6 +30,7 @@ def get_product_for_import(session, product_id: Optional[str] = None, codigo: Op
         ).first()
 
     return None
+
 
 def parse_precio(valor):
     # adaptalo a tu formato: si viene "1.234,56" o "1234.56"
@@ -85,71 +82,85 @@ def api_get_by_codigo(codigo: str):
 # -------------------------
 # IMPORTAR PRODUCTOS
 # -------------------------
+import random
+import string
+
+def gen_product_id(length=4):
+    chars = string.ascii_uppercase + string.digits
+    return ''.join(random.choices(chars, k=length))
+
 @router.post("/import-excel", status_code=status.HTTP_201_CREATED)
 async def import_products(file: UploadFile = File(...)):
-    content = await file.read()
-    df = pd.read_excel(io.BytesIO(content), engine="openpyxl").fillna("")
+    try:
+        content = await file.read()
+        df = pd.read_excel(io.BytesIO(content), engine="openpyxl").fillna("")
 
-    created = 0
-    updated = 0
-    skipped = 0
+        created = 0
+        updated = 0
+        skipped = 0
 
-    with get_session() as session:
-        for _, row in df.iterrows():
+        with get_session() as session:
+            for _, row in df.iterrows():
 
-            product_id = str(row.get("ID", "")).strip() or None
-            codigo = str(row.get("CODIGO BARRA", "")).strip()
-            nombre = (
-                str(row.get("DESCRIPCION LARGA", "")).strip()
-                or str(row.get("DESCRIPCION", "")).strip()
-            )
-
-            if not nombre:
-                skipped += 1
-                continue
-
-            data = {
-                "codigo": codigo,
-                "nombre": nombre,
-                "categoria": str(row.get("RUBRO", "")),
-                "subcategoria": str(row.get("SUBRUBRO", "")),
-                "precio": parse_precio(row.get("PRECIO VENTA C/IVA")),
-                "descripcion": str(row.get("DESCRIPCION ADICIONAL", "")),
-                "proveedor": str(row.get("PROVEEDOR", "")),
-            }
-
-            existing = get_product_for_import(
-                session,
-                product_id=product_id,
-                codigo=codigo
-            )
-
-            if existing:
-                update_product_from_data(existing, data)
-                session.add(existing)
-                updated += 1
-            else:
-                p = Product(
-                    codigo=data["codigo"],
-                    nombre=data["nombre"],
-                    descripcion=data["descripcion"],
-                    categoria=data["categoria"],
-                    subcategoria=data["subcategoria"],
-                    precio=float(data["precio"] or 0.0),
-                    proveedor=data["proveedor"],
-                    habilitado=False,
-                    orden=None
+                id_product = str(row.get("ID", "")).strip() or None
+                codigo = str(row.get("CODIGO BARRA", "")).strip()
+                nombre = (
+                    str(row.get("DESCRIPCION LARGA", "")).strip()
+                    or str(row.get("DESCRIPCION", "")).strip()
                 )
-                session.add(p)
-                created += 1
 
-        session.commit()
+                if not nombre:
+                    skipped += 1
+                    continue
 
-    return {
-        "created": created,
-        "updated": updated,
-        "skipped": skipped
-    }
+                data = {
+                    "codigo": codigo,
+                    "nombre": nombre,
+                    "categoria": str(row.get("RUBRO", "")),
+                    "subcategoria": str(row.get("SUBRUBRO", "")),
+                    "precio": parse_precio(row.get("PRECIO VENTA C/IVA")),
+                    "descripcion": str(row.get("DESCRIPCION ADICIONAL", "")),
+                    "proveedor": str(row.get("PROVEEDOR", "")),
+                }
+
+                existing = get_product_for_import(
+                    session,
+                    product_id=id_product,
+                    codigo=codigo
+                )
+
+                if existing:
+                    update_product_from_data(existing, data)
+                    if id_product:
+                        existing.id = id_product
+                    session.add(existing)
+                    updated += 1
+                else:
+                    p = Product(
+                        id=id_product or gen_product_id(),          
+                        codigo=data["codigo"],
+                        nombre=data["nombre"],
+                        descripcion=data["descripcion"],
+                        categoria=data["categoria"],
+                        subcategoria=data["subcategoria"],
+                        precio=float(data["precio"] or 0.0),
+                        proveedor=data["proveedor"],
+                        habilitado=False,
+                        orden=None
+                    )
+                    session.add(p)
+                    created += 1
+
+            session.commit()
+
+        return {
+            "created": created,
+            "updated": updated,
+            "skipped": skipped
+        }
+    except Exception as e:
+        print("Error importing products from excel:", e)
+        raise HTTPException(status_code=500, detail="Error importing products")
 
 
 @router.post("/import-habilitados", status_code=status.HTTP_201_CREATED)
@@ -356,20 +367,10 @@ def api_get_subcategories():
     
 @router.delete("/delete/all")
 def delete_all_products():
-    try:
-        with get_session() as s:
-            # contar antes
-            total = s.exec(select(Product)).all()
-            deleted_count = len(total)
+    with get_session() as s:
+        result = s.exec(delete(Product))
+        s.commit()
 
-            # borrar todo
-            s.exec(delete(Product))
-            s.commit()
-
-            return {
-                "deleted": deleted_count
-            }
-
-    except Exception as e:
-        print("Error deleting all products:", e)
-        raise HTTPException(status_code=500, detail="Error deleting all products")
+        return {
+            "deleted": result.rowcount or 0
+        }

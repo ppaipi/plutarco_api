@@ -25,6 +25,21 @@ def get_product_by_nombre(session, nombre: str):
         select(Product).where(Product.nombre == nombre)
     ).first()
 
+def get_product_for_import(session, product_id=None, codigo=None):
+    if product_id:
+        product = session.exec(
+            select(Product).where(Product.external_id == product_id)
+        ).first()
+        if product:
+            return product
+
+    if codigo:
+        return session.exec(
+            select(Product).where(Product.codigo == codigo)
+        ).first()
+
+    return None
+
 def update_product_full(session, codigo: str, data: dict):
     """
     Actualiza todas las propiedades del producto identificado por 'codigo',

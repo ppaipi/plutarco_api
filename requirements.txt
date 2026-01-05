@@ -9,3 +9,4 @@ python-dotenv
 mysql-connector-python
 requests
 alembic
+Pillow

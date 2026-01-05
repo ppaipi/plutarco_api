@@ -17,7 +17,7 @@ def get_products(session) -> List[Product]:
 def get_product_by_codigo(session, codigo: str) -> Optional[Product]:
     return session.exec(select(Product).where(Product.codigo == codigo)).first()
 
-def get_product_by_id(session, product_id: int) -> Optional[Product]:
+def get_product_by_id(session, product_id: str) -> Optional[Product]:
     return session.get(Product, product_id)
 
 def get_product_by_nombre(session, nombre: str):
@@ -80,7 +80,7 @@ def update_product_from_data(product: Product, data: dict):
     product.precio = float(data.get("precio", product.precio or 0.0))
     product.proveedor = data.get("proveedor", product.proveedor or "")
 
-def toggle_product_habilitado(session, product_id: int = None, codigo: str = None, habilitado: bool = None):
+def toggle_product_habilitado(session, product_id: str = None, codigo: str = None, habilitado: bool = None):
     """
     Actualiza el campo habilitado de un producto identificado por id o codigo.
     """

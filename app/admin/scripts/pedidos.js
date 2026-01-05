@@ -182,8 +182,10 @@ function render() {
 
     const editBtn = card.querySelector('button[data-action="edit"]');
     const deleteBtn = card.querySelector('button[data-action="delete"]');
+    const printBtn = card.querySelector('button[data-action="print"]');
 
     if (editBtn) editBtn.onclick = () => openEdit(o);
+    if (printBtn) printBtn.onclick = () => printOrder(o.id);
     if (deleteBtn) deleteBtn.onclick = () => confirmAndDelete(o.id);
 
     listEl.appendChild(card);
@@ -373,6 +375,11 @@ async function renderItemsTable(){
       renderItemsTable();
     };
   });
+}
+
+function printOrder(orderId){
+  const url = `${API_URL}orders/print/${orderId}`;
+  window.open(url, '_blank');
 }
 
 // add temporary "varios" item

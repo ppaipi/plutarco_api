@@ -263,7 +263,7 @@ async def import_order_from_csv(file: UploadFile = File(...)):
 # PRODUCTOS – ESTADO
 # -------------------------
 @router.put("/{product_id}/state")
-def api_set_state(product_id: int, payload: SetStatePayload):
+def api_set_state(product_id: str, payload: SetStatePayload):
     with get_session() as s:
         prod = toggle_product_habilitado(s, product_id=product_id, habilitado=payload.habilitado)
         if not prod:
@@ -275,7 +275,7 @@ def api_set_state(product_id: int, payload: SetStatePayload):
 # SET ORDEN
 # -------------------------
 @router.put("/{product_id}/order")
-def api_set_order(product_id: int, payload: SetOrderPayload):
+def api_set_order(product_id: str, payload: SetOrderPayload):
     with get_session() as s:
         prod = s.get(Product, product_id)
         if not prod:

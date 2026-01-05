@@ -1,5 +1,6 @@
 import { TOKEN } from "./config.js";
 import { savePreviousPage } from "./helper.js";
+savePreviousPage();
 
 document.addEventListener("DOMContentLoaded", () => {
   const logoutBtn = document.getElementById("btn-logout");

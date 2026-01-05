@@ -1,4 +1,5 @@
 from fastapi import status, APIRouter, HTTPException, Query
+from fastapi.responses import HTMLResponse
 from app.models import Product, Order, OrderProduct
 from datetime import date
 from sqlmodel import select
@@ -46,7 +47,7 @@ def generar_html_pedido(order: Order) -> str:
         <tr>
             <td style="padding:6px;">{p.cantidad}</td>
             <td style="padding:6px;">{p.nombre}</td>
-            <td style="padding:6px; text-align:right;">${(p.cantidad or 0) * (p.precio_unitario or 0):.2f}</td>
+            <td style="padding:6px; text-align:right;">${int((p.cantidad or 0) * (p.precio_unitario or 0))}</td>
         </tr>
         """
     html = f"""
@@ -77,15 +78,15 @@ def generar_html_pedido(order: Order) -> str:
         <table style="width:100%; border-collapse: collapse; font-size: 15px;">
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">Subtotal:</td>
-                <td style="padding: 8px; text-align:right; border-bottom: 1px solid #ddd;"><strong>${order.subtotal:.2f}</strong></td>
+                <td style="padding: 8px; text-align:right; border-bottom: 1px solid #ddd;"><strong>${int(order.subtotal)}</strong></td>
             </tr>
             <tr>
                 <td style="padding: 8px; border-bottom: 1px solid #ddd;">Envío:</td>
-                <td style="padding: 8px; text-align:right; border-bottom: 1px solid #ddd;"><strong>${order.envio_cobrado:.2f}</strong></td>
+                <td style="padding: 8px; text-align:right; border-bottom: 1px solid #ddd;"><strong>${int(order.envio_cobrado)}</strong></td>
             </tr>
             <tr>
                 <td style="padding: 10px; font-size: 1.1em; font-weight: bold;">TOTAL:</td>
-                <td style="padding: 10px; text-align:right; font-size: 1.1em; font-weight: bold; color: #1e88e5;">${order.total:.2f}</td>
+                <td style="padding: 10px; text-align:right; font-size: 1.1em; font-weight: bold; color: #1e88e5;">${int(order.total)}</td>
             </tr>
         </table>
         </div>
@@ -93,7 +94,7 @@ def generar_html_pedido(order: Order) -> str:
             <h4 style="margin-top: 0;">💸 Información para el pago</h4>
             <p>Por favor, transferí <strong>${order.total}</strong> al alias <strong>plutarco.almacen</strong></p>
             <p>Cuenta a nombre de <strong>Dario Chapur</strong>.</p>
-            <p>Una vez realizado el pago, te pedimos que envíes el comprobante a este mismo correo electrónico o a nuestro whatsapp: <a href="https://wa.me/5491150168920?text=Hola Plutarco Almacen! Realicé un pedido de $${order.total} a nombre de ${order.nombre_completo}"> 11 5016-8920.</p>
+            <p>Una vez realizado el pago, te pedimos que envíes el comprobante a este mismo correo electrónico o a nuestro whatsapp: <a href="https://wa.me/5491150168920?text=Hola Plutarco Almacén! Realicé un pedido de *${order.total}* a nombre de *{order.nombre_completo}*"> 11 5016-8920.</p>
             <p>Confirmaremos tu pedido una vez recibido el comprobante.</p>
         </div>
         <div style="margin-top: 30px; background: #e2e3e5; padding: 14px; border-left: 5px solid #6c757d; border-radius: 8px;">
@@ -176,7 +177,7 @@ def api_create_order(payload: dict):
         items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
         # enviar mail de confirmación
         html_pedido = generar_html_pedido(order)
-        enviar_mail(order.correo, "✅ Confirmación de tu pedido en Plutarco Almacén", html_pedido)
+        enviar_mail(order.correo, "✅ Pedido Recibido - Plutarco Almacén", html_pedido)
 
         #enviar mail a admin
         enviar_mail("plutarcoalmacen@gmail.com", f"Nuevo pedido de {order.nombre_completo}", html_pedido)
@@ -417,3 +418,94 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                 errors.append(f"Fila {idx+1}: {str(e)}")
 
     return {"created": created, "errors": errors}
+
+def generar_html_imprimir(order: Order) -> str:
+    productos_html = ""
+    for p in order.productos:
+        productos_html += f"""
+        <tr>
+            <td style="padding:6px;">{p.cantidad}</td>
+            <td style="padding:6px;">{p.nombre}</td>
+            <td style="padding:6px; text-align:right;">${int((p.cantidad or 0) * (p.precio_unitario or 0))}</td>
+        </tr>
+        """
+    html = f"""
+    <html>
+    <head>
+        <title>Pedido #{order.id} - Plutarco Almacén</title>
+        <style>
+            body {{
+                font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+                color: #333;
+                max-width: 800px;
+                margin: 20px auto;
+            }}
+            table {{
+                width: 100%;
+                border-collapse: collapse;
+                font-size: 15px;
+                margin-top: 10px;
+                margin-bottom: 10px;
+            }}
+            th, td {{
+                padding: 6px;
+                border-bottom: 1px solid #ddd;
+            }}
+            th {{
+                background: #f5f5f5;
+                text-align: left;
+            }}
+        </style>
+    </head>
+    <body>
+        <h2 style="text-align:center;">🛍️ Detalles del Pedido | Plutarco Almacén 🥖</h2>
+        <div>
+            <p><strong>Nombre:</strong> {order.nombre_completo}</p>
+            <p><strong>Email:</strong> {order.correo}</p>
+            <p><strong>Teléfono:</strong> {order.telefono}</p>
+            <p><strong>Dirección:</strong> {order.direccion}</p>
+            <p><strong>Día de entrega:</strong> {order.dia_entrega}</p>
+            {"<p><strong>Comentario:</strong> " + order.comentario + "</p>" if order.comentario else ""}
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>Cant.</th>
+                    <th>Producto</th>
+                    <th style="text-align:right;">Precio</th>
+                </tr>
+            </thead>
+            <tbody>
+                {productos_html}
+            </tbody>
+        </table>
+        <div>
+        <table>
+            <tr>
+                <td>Subtotal:</td>
+                <td style="text-align:right;"><strong>${int(order.subtotal)}</strong></td>
+            </tr>
+            <tr>
+                <td>Envío:</td>
+                <td style="text-align:right;"><strong>${int(order.envio_cobrado)}</strong></td>
+            </tr>
+            <tr>
+                <td><strong>TOTAL:</strong></td>
+                <td style="text-align:right; font-size: 1.1em; font-weight: bold; color: #1e88e5;"><strong>${int(order.total)}</strong></td>
+            </tr>
+        </table>
+        </div>
+    </body>
+    </html>
+    """
+    return html
+
+@router.get("/print/{order_id}", response_class=HTMLResponse)
+def api_print_order(order_id: int):
+    with get_session() as s:
+        order = s.get(Order, order_id)
+        if not order:
+            raise HTTPException(404)
+
+        html_pedido = generar_html_imprimir(order)
+        return html_pedido

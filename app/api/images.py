@@ -5,6 +5,8 @@ from app.config import IMAGES_DIR
 from app.database import get_session
 from app.models import Product
 from sqlmodel import select
+from PIL import Image
+from io import BytesIO
 
 
 router = APIRouter(prefix="/images", tags=["images"])
@@ -33,6 +35,47 @@ async def upload_image(file: UploadFile = File(...)):
     return {"filename": filename, "url": f"/images/{filename}"}
 
 
+def optimize_image(file):
+    image = Image.open(file.file)
+    original_format = image.format.upper()
+
+    # Redimensionar sin deformar
+    image.thumbnail((800, 800))
+
+    buffer = BytesIO()
+
+    # Detectar transparencia
+    has_alpha = (
+        image.mode in ("RGBA", "LA") or
+        (image.mode == "P" and "transparency" in image.info)
+    )
+
+    # ---- PNG ----
+    if original_format == "PNG":
+        if has_alpha:
+            # Mantener PNG si tiene transparencia
+            image.save(buffer, format="PNG", optimize=True)
+        else:
+            # Convertir a JPG si no necesita transparencia
+            image = image.convert("RGB")
+            image.save(buffer, format="JPEG", quality=85, optimize=True)
+
+    # ---- JPG / JPEG ----
+    elif original_format in ("JPG", "JPEG"):
+        image = image.convert("RGB")  # seguridad
+        image.save(buffer, format="JPEG", quality=85, optimize=True)
+
+    # ---- WEBP ----
+    elif original_format == "WEBP":
+        image.save(buffer, format="WEBP", quality=80, method=6)
+
+    else:
+        raise ValueError("Formato de imagen no soportado")
+
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
 @router.post("/upload/{codigo}/", status_code=status.HTTP_201_CREATED)
 async def upload_image_for_product(codigo: str, file: UploadFile = File(...)):
     # validate extension
@@ -41,31 +84,42 @@ async def upload_image_for_product(codigo: str, file: UploadFile = File(...)):
     if ext not in ('.jpg', '.jpeg', '.png', '.webp'):
         raise HTTPException(status_code=400, detail="Formato de imagen no soportado")
 
-    # construct filename based on product code to keep one image per product
+    # filename
     filename = f"{codigo}{ext}"
     path = os.path.join(IMAGES_DIR, filename)
 
-    # save file (overwrite existing)
     try:
-        content = await file.read()
-        with open(path, 'wb') as f:
-            f.write(content)
+        optimized_bytes = optimize_image(file)
+
+        with open(path, "wb") as f:
+            f.write(optimized_bytes)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error guardando archivo: {e}")
 
     # update product record imagen_url
     try:
         with get_session() as s:
-            stmt = select(Product).where(Product.codigo == codigo)
-            prod = s.exec(stmt).first()
+            prod = s.exec(
+                select(Product).where(Product.codigo == codigo)
+            ).first()
+
+            url = f"/images/{filename}"
+
             if not prod:
-                # if product not found, still return URL but inform caller
-                url = f"/images/{filename}"
-                return JSONResponse(status_code=201, content={"filename": filename, "url": url, "warning": "Producto no encontrado"})
-            prod.imagen_url = f"/images/{filename}"
+                return JSONResponse(
+                    status_code=201,
+                    content={
+                        "filename": filename,
+                        "url": url,
+                        "warning": "Producto no encontrado"
+                    }
+                )
+
+            prod.imagen_url = url
             s.add(prod)
             s.commit()
-            s.refresh(prod)
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error actualizando producto: {e}")
 

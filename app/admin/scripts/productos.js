@@ -424,5 +424,4 @@ loadMoreBtn.addEventListener('click', ()=> { visibleCount += PAGE_STEP; renderFi
 
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// Check token on init - rediijo a login si no hay token
 loadProducts(true);

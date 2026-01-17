@@ -7,4 +7,5 @@ export function savePreviousPage() {
   if (path.includes("login")) return;
 
   localStorage.setItem("previous_page", path);
+  console.log("Previous page saved:", path);
 }

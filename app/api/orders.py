@@ -12,12 +12,12 @@ from sqlmodel import Session
 from fastapi import UploadFile, File
 from datetime import datetime
 from sqlalchemy import text
+from app.config import RESEND_API_KEY
 
 
 router = APIRouter(prefix="/orders", tags=["orders"])
 
 
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
 def enviar_mail(to: str, subject: str, html: str):
     response = requests.post(
@@ -27,7 +27,7 @@ def enviar_mail(to: str, subject: str, html: str):
             "Content-Type": "application/json"
         },
         json={
-            "from": "Plutarco Almacén - Pedidos <pedidos@plutarcoalmacen.com.ar>",
+            "from": "Plutarco Almacén Pedidos <pedidos@plutarcoalmacen.com.ar>",
             "to": [to],
             "subject": subject,
             "html": html
@@ -47,19 +47,20 @@ def generar_html_pedido(order: Order) -> str:
         <tr>
             <td style="padding:6px;">{p.cantidad}</td>
             <td style="padding:6px;">{p.nombre}</td>
+            <td style="padding:6px;">${int(p.precio_unitario or 0)}</td>
             <td style="padding:6px; text-align:right;">${int((p.cantidad or 0) * (p.precio_unitario or 0))}</td>
         </tr>
         """
     html = f"""
     <div style="max-width: 600px; margin: 20px auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color:
     #333; background: #ffffff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-        <h2 style="text-align:center;">🛍️ Detalles del Pedido | Plutarco Almacen 🥖</h2>
+        <h2 style="text-align:center;">📦 Pedido #${order.id} | Plutarco Almacén 🥖</h2>
         <div style="background: #f7f9fc; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e3e6eb;">
             <p><strong>Nombre:</strong> {order.nombre_completo}</p>
             <p><strong>Email:</strong> {order.correo}</p>
             <p><strong>Teléfono:</strong> {order.telefono}</p>
             <p><strong>Dirección:</strong> {order.direccion}</p>
-            <p><strong>Día de entrega:</strong> {order.dia_entrega}</p>
+            <p><strong>Día de entrega:</strong> {recompute_date_args(order.dia_entrega)}</p>
             {"<p><strong>Comentario:</strong> " + order.comentario + "</p>" if order.comentario else ""}
         </div>
         <table style="width:100%; border-collapse: collapse; font-size: 15px; margin-top:10px; margin-bottom:10px;">
@@ -67,7 +68,8 @@ def generar_html_pedido(order: Order) -> str:
                 <tr style="background:#f5f5f5;">
                     <th style="text-align:left; padding:6px;">Cant.</th>
                     <th style="text-align:left; padding:6px;">Producto</th>
-                    <th style="text-align:right; padding:6px;">Precio</th>
+                    <th style="text-align:left; padding:6px;">Precio</th>
+                    <th style="text-align:right; padding:6px;">Total</th>
                 </tr>
             </thead>
             <tbody>
@@ -124,6 +126,25 @@ def recompute_order_totals(session: Session, order: Order):
 
     return order
 
+def recompute_date_args(value):
+    """
+    Acepta str, date o datetime y devuelve 'DD/MM/YYYY'
+    """
+    if not value:
+        return None
+
+    try:
+        if isinstance(value, str):
+            dt = datetime.strptime(value[:10], "%Y-%m-%d")
+        elif isinstance(value, (datetime, date)):
+            dt = value
+        else:
+            return None
+
+        return dt.strftime("%d/%m/%Y")
+    except Exception:
+        return None
+
 
 
 
@@ -177,10 +198,11 @@ def api_create_order(payload: dict):
         items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
         # enviar mail de confirmación
         html_pedido = generar_html_pedido(order)
-        enviar_mail(order.correo, "✅ Pedido Recibido - Plutarco Almacén", html_pedido)
+        if(order.correo):
+            enviar_mail(order.correo, "✅ Pedido Recibido - Plutarco Almacén", html_pedido)
 
-        #enviar mail a admin
-        enviar_mail("plutarcoalmacen@gmail.com", f"Nuevo pedido de {order.nombre_completo}", html_pedido)
+            #enviar mail a admin
+            enviar_mail("plutarcoalmacen@gmail.com", f"Nuevo pedido de {order.nombre_completo}", html_pedido)
 
         return {"order": order, "productos": items}
 
@@ -208,8 +230,8 @@ def api_update_order(order_id: int, payload: dict):
         order.telefono = payload.get("telefono", order.telefono)
         order.direccion = payload.get("direccion", order.direccion)
         order.comentario = payload.get("comentario", order.comentario)
-        order.envio_cobrado = float(payload.get("envio_cobrado", order.envio_cobrado))
-        order.costo_envio_real = float(payload.get("costo_envio_real", order.costo_envio_real))
+        order.envio_cobrado = int(payload.get("envio_cobrado", order.envio_cobrado))
+        order.costo_envio_real = int(payload.get("costo_envio_real", order.costo_envio_real))
         order.confirmado = bool(payload.get("confirmado", order.confirmado))
         order.entregado = bool(payload.get("entregado", order.entregado))
 
@@ -266,6 +288,29 @@ def api_get_order(order_id: int):
         items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order_id)).all()
         return {"order": order, "productos": items}
 
+
+@router.post("/{order_id}/toggle-confirmed")
+def api_toggle_order_confirmed(order_id: int):
+    with get_session() as s:
+        order = s.get(Order, order_id)
+        if not order:
+            raise HTTPException(404)
+
+        order.confirmado = not order.confirmado
+        s.commit()
+
+        return {"confirmado": order.confirmado}
+@router.post("/{order_id}/toggle-delivered")
+def api_toggle_order_delivered(order_id: int):
+    with get_session() as s:
+        order = s.get(Order, order_id)
+        if not order:
+            raise HTTPException(404)
+
+        order.entregado = not order.entregado
+        s.commit()
+
+        return {"entregado": order.entregado}
 
 # -------------------------
 # BORRAR ITEM
@@ -350,11 +395,11 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                 costo_envio_real = row.get("COSTO ENVIO", 0)
                 envio_cobrado = row.get("Envio", 0)
                 try:
-                    envio_cobrado = float(str(envio_cobrado).replace("$", "").replace(".", "").replace(",", "."))
+                    envio_cobrado = int(str(envio_cobrado).replace("$", "").replace(".", "").replace(",", "."))
                 except:
                     envio_cobrado = 0
                 try:
-                    costo_envio_real = float(str(costo_envio_real).replace("$", "").replace(".", "").replace(",", "."))
+                    costo_envio_real = int(str(costo_envio_real).replace("$", "").replace(".", "").replace(",", "."))
                 except:
                     costo_envio_real = 0
                 try:
@@ -378,7 +423,7 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                     row.get("Subtotal") or 0
                 )
                 try:
-                    subtotal = float(str(subtotal).replace("$", "").replace(".", "").replace(",", "."))
+                    subtotal = int(str(subtotal).replace("$", "").replace(".", "").replace(",", "."))
                 except:
                     subtotal = 0
 
@@ -426,6 +471,7 @@ def generar_html_imprimir(order: Order) -> str:
         <tr>
             <td style="padding:6px;">{p.cantidad}</td>
             <td style="padding:6px;">{p.nombre}</td>
+            <td style="padding:6px;">${int(p.precio_unitario or 0)}</td>
             <td style="padding:6px; text-align:right;">${int((p.cantidad or 0) * (p.precio_unitario or 0))}</td>
         </tr>
         """
@@ -464,7 +510,7 @@ def generar_html_imprimir(order: Order) -> str:
             <p><strong>Email:</strong> {order.correo}</p>
             <p><strong>Teléfono:</strong> {order.telefono}</p>
             <p><strong>Dirección:</strong> {order.direccion}</p>
-            <p><strong>Día de entrega:</strong> {order.dia_entrega}</p>
+            <p><strong>Día de entrega:</strong> {recompute_date_args(order.dia_entrega)}</p>
             {"<p><strong>Comentario:</strong> " + order.comentario + "</p>" if order.comentario else ""}
         </div>
         <table>
@@ -472,7 +518,8 @@ def generar_html_imprimir(order: Order) -> str:
                 <tr>
                     <th>Cant.</th>
                     <th>Producto</th>
-                    <th style="text-align:right;">Precio</th>
+                    <th>Precio</th>
+                    <th style="text-align:right;">Total</th>
                 </tr>
             </thead>
             <tbody>

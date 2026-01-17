@@ -1,5 +1,6 @@
 import API_URL, { PREVIOUS_PAGE } from "./config.js";
 
+const previous_page = PREVIOUS_PAGE;
 const btnLogin = document.getElementById("btn-login");
 const loginMsg = document.getElementById("login-msg");
 const loginUser = document.getElementById("login-user");
@@ -59,12 +60,10 @@ btnLogin.addEventListener("click", async () => {
     loginMsg.textContent = "✓ Login exitoso, redirigiendo...";
     loginMsg.classList.add("success");
 
-    // limpiar previous_page
-    sessionStorage.removeItem("previous_page");
 
     setTimeout(() => {
-      if (isSafeInternalPath(PREVIOUS_PAGE)) {
-        window.location.href = PREVIOUS_PAGE;
+      if (isSafeInternalPath(previous_page)) {
+        window.location.href = previous_page;
       } else {
         window.location.href = "/productos/";
       }

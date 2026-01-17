@@ -39,27 +39,15 @@ const typeaheadList = document.getElementById("typeahead-list");
 const itemsTableBody = document.querySelector("#items-table tbody");
 const calcSubtotal = document.getElementById("calc-subtotal");
 const btnAddTemp = document.getElementById("btn-add-temp");
-
-// theme toggle reuse (if exists)
-const btnTheme = document.getElementById("theme-toggle");
-const saved = localStorage.getItem("theme");
-if (saved === "dark") {
-  document.documentElement.classList.add("dark");
-  if (btnTheme) btnTheme.textContent = "☀️";
-}
-if (btnTheme) btnTheme.onclick = () => {
-  const isDark = document.documentElement.classList.toggle("dark");
-  if (btnTheme) btnTheme.textContent = isDark ? "☀️" : "🌙";
-  localStorage.setItem("theme", isDark ? "dark" : "light");
-};
+const btnPrintSome = document.getElementById("print-some");
 
 // Base API URL (usar absoluta para evitar redirecciones http/https)
 import API_URL from "./config.js";
 import { TOKEN } from "./config.js";
+import { generarHTMLPrint } from "./printhtml.js";
 let token = TOKEN;
 
-
-
+import { recomputeDate } from "./datearg.js";
 // state
 let orders = [];
 let page = 0;
@@ -108,6 +96,54 @@ async function loadOrders(){
     console.error(e);
     if (listEl) listEl.innerHTML = `<div class="card no-results">Error cargando pedidos</div>`;
   }
+}
+function toggleButtonConfirm(element, confirmado) {
+  const msdConfirmed = element;
+  if (!msdConfirmed) return;
+  if (confirmado) {
+      msdConfirmed.textContent = 'Confirmado';
+      msdConfirmed.className = 'primary';
+  }
+  else if (!confirmado) {
+      msdConfirmed.textContent = 'No confirmado';
+      msdConfirmed.className = 'muted';
+  }
+}
+function toggleButtonDelivered(element, entregado) {
+  const msdDelivered = element;
+  if (!msdDelivered) return;
+  if (entregado) {
+      msdDelivered.textContent = 'Entregado';
+      msdDelivered.className = 'success';
+  }
+  else if (!entregado) {
+      msdDelivered.textContent = 'No entregado';
+      msdDelivered.className = 'muted';
+  }
+}
+async function toggleConfirm(orderId){
+  const headers = {};
+  if (token) headers['x-api-key'] = token;
+  const res = await fetch(API_URL + `orders/${orderId}/toggle-confirmed`, { method: 'POST', headers });
+  if(!res.ok){
+    console.error('Error toggling confirm');
+    return;
+  }
+  const confirmado = await res.json().then(data => data.confirmado);
+  const msgConfirmed = document.getElementById(`msg-confirmed-${orderId}`);
+  toggleButtonConfirm(msgConfirmed, confirmado);
+}
+async function toggleDelivered(orderId){
+  const headers = {};
+  if (token) headers['x-api-key'] = token;
+  const res = await fetch(API_URL + `orders/${orderId}/toggle-delivered`, { method: 'POST', headers });
+  if(!res.ok){
+    console.error('Error toggling delivered');
+    return;
+  }
+  const entregado = await res.json().then(data => data.entregado);
+  const msgDelivered = document.getElementById(`msg-delivered-${orderId}`);
+  toggleButtonDelivered(msgDelivered, entregado);
 }
 
 // ===================== RENDER ORDERS =====================
@@ -168,21 +204,60 @@ function render() {
         <span>${escapeHtml(o.nombre_completo || '—')}</span>
         <span class="muted small">#${o.id}</span>
       </h3>
-      <p class="small">${escapeHtml(o.correo || '')}</p>
-      <p class="small">${escapeHtml(o.telefono || '')} • ${escapeHtml(o.direccion || '')}</p>
-      <p class="small">Pedido: <b>${o.dia_pedido || '-'}</b></p>
-      <p class="small">Total: $${Number(o.total || 0).toFixed(2)}</p>
 
+      <p class="small">
+        <span>${escapeHtml(o.correo || '')} </span> • <span id="phone-${o.id}">${escapeHtml(o.telefono || '')}</span>
+      </p>
+
+      <p class="small"> <span id="address-${o.id}">${escapeHtml(o.direccion || '')}</span></p>
+
+      <p class="small">
+        Pedido: <b>${recomputeDate(o.dia_pedido) || '-'}</b> •
+        Entrega: <b>${recomputeDate(o.dia_entrega) || '-'}</b>
+      </p>
+
+      <p class="small">Total: <b>$${Number(o.total || 0)}</b></p>
+
+      <p class="small">
+        <span id="msg-confirmed-${o.id}" class=""></span> • <span id="msg-delivered-${o.id}" class=""></span>
+       </p>
       <div style="display:flex;gap:8px;margin-top:8px">
-        <button class="btn small" data-id="${o.id}" data-action="edit">Ver / Editar</button>
-        <button class="btn ghost small" data-id="${o.id}" data-action="print">Imprimir</button>
-        <button class="btn danger small" data-id="${o.id}" data-action="delete">Eliminar</button>
+        <button class="btn small" data-id="${o.id}" data-action="edit" id="edit-${o.id}">Ver / Editar</button>
+        <button class="btn ghost small" data-id="${o.id}" data-action="print" id="print-${o.id}">Imprimir</button>
+        <button class="btn danger small" data-id="${o.id}" data-action="delete" id="delete-${o.id}">Eliminar</button>
       </div>
     `;
 
-    const editBtn = card.querySelector('button[data-action="edit"]');
-    const deleteBtn = card.querySelector('button[data-action="delete"]');
-    const printBtn = card.querySelector('button[data-action="print"]');
+
+    const editBtn = card.querySelector('button[id="edit-' + o.id + '"]');
+    const deleteBtn = card.querySelector('button[id="delete-' + o.id + '"]');
+    const printBtn = card.querySelector('button[id="print-' + o.id + '"]');
+
+    const msgConfirmed = card.querySelector(`#msg-confirmed-${o.id}`);
+    const msgDelivered = card.querySelector(`#msg-delivered-${o.id}`);
+
+    const phoneEl = card.querySelector(`#phone-${o.id}`);
+    const addressEl = card.querySelector(`#address-${o.id}`);
+    if (phoneEl) {
+      phoneEl.onclick = () => { window.open(`https://wa.me/${encodeURIComponent(o.telefono || '')}`, '_blank'); };
+      phoneEl.style.cursor = 'pointer';
+    }
+    if (addressEl) {
+      addressEl.onclick = () => { window.open(`https://www.google.com/maps/search/${encodeURIComponent(o.direccion || '')}`, '_blank'); };
+      addressEl.style.cursor = 'pointer';
+    }
+
+    if (msgConfirmed) {
+      toggleButtonConfirm(msgConfirmed, o.confirmado);
+      msgConfirmed.onclick = () => { toggleConfirm(o.id); };
+      msgConfirmed.style.cursor = 'pointer';
+    }
+
+    if (msgDelivered) {
+      toggleButtonDelivered(msgDelivered, o.entregado);
+      msgDelivered.onclick = () => { toggleDelivered(o.id); };
+      msgDelivered.style.cursor = 'pointer';
+    }
 
     if (editBtn) editBtn.onclick = () => openEdit(o);
     if (printBtn) printBtn.onclick = () => printOrder(o.id);
@@ -194,6 +269,9 @@ function render() {
 
 // ===================== ESCAPE HTML =====================
 function escapeHtml(s){ if(s === null || s === undefined) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// mostrar mensaje temporal sin alerta
+
 
 // ===================== DELETE ORDER =====================
 async function confirmAndDelete(orderId){
@@ -238,6 +316,50 @@ if (btnNewOrder) btnNewOrder.addEventListener('click', ()=>{
   openModalUI();
 });
 
+async function get_order(orderId) {
+  try {
+    const path = `orders/${orderId}`;
+    const headers = {};
+    if (token) headers['x-api-key'] = token;
+
+    const res = await fetch(API_URL + path, {
+      method: 'GET',
+      headers
+    });
+
+    if (!res.ok) {
+      const txt = await res.text().catch(() => '');
+      throw new Error(txt || res.status);
+    }
+
+    // ✅ parse JSON
+    const data = await res.json();
+
+    const productos = data.productos || [];
+
+    const items = productos.map(it => ({
+      id: it.id,
+      codigo: it.codigo || it.product_codigo || '',
+      nombre: it.nombre || it.product_name || '',
+      cantidad: it.cantidad || 1,
+      precio_unitario: Number(it.precio_unitario || it.precio || 0)
+    }));
+
+    const order = data.order || {};
+
+    order.productos = productos;
+    order.items = items;
+
+    return order;
+
+  } catch (e) {
+    console.error('Error cargando orden:', e);
+    return null;
+  }
+}
+
+
+
 async function openEdit(order){
   editingOrderId = order.id;
   if (modalTitle) modalTitle.textContent = `Editar pedido #${order.id}`;
@@ -258,31 +380,16 @@ async function openEdit(order){
 
   try{
     // obtener pedido con fetch local usando buildApiUrl
-    const r = await (async ()=>{
-      const path = `orders/${order.id}`;
-      const headers = {};
-      if (token) headers['x-api-key'] = token;
-      const res = await fetch(API_URL + path, { method: 'GET', headers });
-      if(!res.ok){
-        const txt = await res.text().catch(()=>'');
-        throw new Error(txt || res.status);
-      }
-      return res.status === 204 ? null : await res.json();
-    })();
-    items = (r.productos || []).map(it => ({
-      id: it.id,
-      codigo: it.codigo || it.product_codigo || '',
-      nombre: it.nombre || it.product_name || '',
-      cantidad: it.cantidad || 1,
-      precio_unitario: Number(it.precio_unitario || it.precio || 0)
-    }));
-  }catch(e){
+    const order_fetch = await get_order(order.id);
+    items = order_fetch.items || [];
+    renderItemsTable();
+    openModalUI();
+    modal.scrollTo(0,0);
+}
+  catch(e){
     console.error(e);
-    items = [];
+    alert('Error cargando pedido: ' + (e.message||e));
   }
-  renderItemsTable();
-  openModalUI();
-  modal.scrollTo(0,0);
 }
 
 function openModalUI(){
@@ -331,23 +438,23 @@ async function renderItemsTable(){
     subtotal += subtotalItem;
 
     const tr = document.createElement('tr');
+    tr.className = 'item-row';
 
-    // placeholder img now, we will replace src async
-    const imgId = `item-img-${idx}-${Date.now()}`;
+
+
+    const imgId = `item-img-${it.codigo.replace(/[^a-zA-Z0-9_-]/g,'_')}-${idx}`;
 
     tr.innerHTML = `
-      <td><img id="${imgId}" src="/media_static/placeholder.jpg" alt="Imagen" style="width:50px;height:50px;object-fit:cover;"></td>
-      <td><input class="input" data-idx="${idx}" data-field="codigo" value="${escapeHtml(it.codigo||'')}"></td>
-      <td><input class="input" data-idx="${idx}" data-field="nombre" value="${escapeHtml(it.nombre||'')}"></td>
-      <td><input class="input" data-idx="${idx}" data-field="cantidad" type="number" style="width:80px" value="${it.cantidad||1}"></td>
-      <td><input class="input" data-idx="${idx}" data-field="precio_unitario" type="number" style="width:120px" value="${it.precio_unitario||0}"></td>
-      <td class="cell-subtotal">$${subtotalItem.toFixed(2)}</td>
-      <td><button class="btn small" data-idx="${idx}" data-action="remove">Eliminar</button></td>
+      <td class="item-img-conteiner"><img class="item-img" id="${imgId}" src="/media_static/placeholder.jpg" alt="Imagen de ${it.nombre}"></td>
+      <td><input placeholder="Codigo" class="input item-codigo" data-idx="${idx}" data-field="codigo" value="${escapeHtml(it.codigo||'')}"></td>
+      <td><input placeholder="Nombre" class="input item-nombre" data-idx="${idx}" data-field="nombre" value="${escapeHtml(it.nombre||'')}"></td>
+      <td><input placeholder="Cantidad" class="input item-cantidad" data-idx="${idx}" data-field="cantidad" type="number"  value="${it.cantidad||1}"></td>
+      <td><input placeholder="Precio Unitario" class="input item-precio_unitario" data-idx="${idx}" data-field="precio_unitario" type="number"  value="${it.precio_unitario||0}"></td>
+      <td class="cell-subtotal">$${subtotalItem}</td>
+      <td><button class="btn danger small item-eliminar" data-idx="${idx}" data-action="remove">Eliminar</button></td>
     `;
     itemsTableBody.appendChild(tr);
-
-    // update image asynchronously
-    (async () => {
+        (async () => {
       const imagen = await get_image_link(it.codigo);
       const imgEl = document.getElementById(imgId);
       if (imgEl) imgEl.src = imagen;
@@ -355,7 +462,7 @@ async function renderItemsTable(){
   }
 
   // update subtotal display
-  if (calcSubtotal) calcSubtotal.textContent = subtotal.toFixed(2);
+  if (calcSubtotal) calcSubtotal.textContent = subtotal;
 
   // attach listeners (re-query because we rebuilt DOM)
   itemsTableBody.querySelectorAll('input[data-field]').forEach(inp=>{
@@ -377,17 +484,46 @@ async function renderItemsTable(){
   });
 }
 
-function printOrder(orderId){
-  const url = `${API_URL}orders/print/${orderId}`;
-  window.open(url, '_blank');
+async function printOrder(orderID){
+/*   const url = `${API_URL}orders/print/${orderId}`;
+  window.open(url, '_blank'); */
+
+  const order = await get_order(orderID);
+  let print = window.open(' ', 'popimpr');
+  print.document.write(generarHTMLPrint(order));
+  print.document.close();
+  print.print( );
+  print.close();
 }
 
 // add temporary "varios" item
 if (btnAddTemp) btnAddTemp.addEventListener('click', ()=>{
-  const nombre = prompt('Nombre del artículo temporal (ej: Varios, Recargo):','Varios');
+  const nombre = prompt('Nombre del artículo temporal (ej: Varios, Recargo):','Varios Almacen');
   if(!nombre) return;
   items.push({ codigo: '', nombre: nombre, cantidad: 1, precio_unitario: 0 });
   renderItemsTable();
+});
+
+if(btnPrintSome) btnPrintSome.addEventListener('click', async ()=>{
+  let ordersSelected = [];
+  //mostrar modal para seleccionar pedidos
+  const input = prompt('Ingrese los IDs de los pedidos a imprimir, separados por comas (ej: 1,2,3):');
+  if(!input) return;
+  const ids = input.split(',').map(id=>Number(id.trim())).filter(id=>!isNaN(id));
+  for(const id of ids){
+    const order = await get_order(id);
+    if(order) ordersSelected.push(order);
+  }
+  if(ordersSelected.length === 0){
+    alert('No se encontraron pedidos con los IDs proporcionados.');
+    return;
+  }
+  let htmlContent = generarHTMLPrint(ordersSelected);
+  let print = window.open(' ', 'popimpr');
+  print.document.write(htmlContent);
+  print.document.close();
+  print.print( );
+  print.close();
 });
 
 // ===================== TYPEAHEAD IMPLEMENTATION =====================
@@ -438,7 +574,7 @@ function openTypeahead(){
     const div = document.createElement('div');
     div.className = 'typeahead-item' + (i===typeaheadActive ? ' active' : '');
     div.dataset.index = i;
-    div.innerHTML = `<div><strong>${escapeHtml(r.nombre)}</strong><div class="meta">${escapeHtml(r.codigo)}</div></div><div class="meta">$${Number(r.precio||0).toFixed(2)}</div>`;
+    div.innerHTML = `<div><strong>${escapeHtml(r.nombre)}</strong><div class="meta">${escapeHtml(r.codigo)}</div></div><div class="meta">$${Number(r.precio||0)}</div>`;
     div.onclick = ()=> selectTypeahead(i);
     typeaheadList.appendChild(div);
   });
@@ -560,10 +696,13 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
 
       // POST crear pedido (ruta relativa)
       {
-        const path = 'orders';
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['x-api-key'] = token;
-        const res = await fetch(API_URL + path, { method: 'POST', headers, body: JSON.stringify(newPayload) });
+        const res = await fetch('https://plutarco-api.fly.dev/orders/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(newPayload)
+        });        
         if(!res.ok){
           const txt = await res.text().catch(()=>'');
           throw new Error(txt || res.status);

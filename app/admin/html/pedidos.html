@@ -26,7 +26,7 @@
 
 
   <section class="card controls">
-    <div class="left" style="display:flex;flex-wrap:wrap;gap:10px">
+    <div class="left">
 
       <input id="search" class="input" placeholder="Buscar por nombre, mail o dirección…">
       <!-- FILTRO STATUS -->
@@ -58,6 +58,7 @@
       <input id="file-excel" type="file" accept=".xls,.xlsx" hidden>
       <button id="btn-import-excel" class="btn">Importar Excel</button>
       <button id="btn-new-order" class="btn primary">+ Nuevo Pedido</button>
+      <button id="print-some" class="btn">Imprimir Varios</button>
     </div>
   </section>
 
@@ -66,7 +67,7 @@
   <!-- ======================= -->
   <section id="list"></section>
 
-  <div class="card pager" style="text-align:center;margin-top:8px">
+  <div class="card pager" >
     <button id="btn-load-more" class="btn ghost">Cargar más</button>
   </div>
 
@@ -82,7 +83,7 @@
 
     <h3 id="modal-title">Pedido</h3>
 
-    <div class="form-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px;">
+    <div class="form-grid" >
       <label>Nombre<br><input id="o-nombre" class="input"></label>
       <label>Email<br><input id="o-correo" class="input"></label>
       <label>Teléfono (<a href="#" id="o-telefono-wpp" target="_blank">wpp</a>)<br><input id="o-telefono" class="input"></label>
@@ -93,37 +94,45 @@
       <label>Totál<br><input id="o-total" type="number" class="input" disabled></label>
       <label>Comentario<br><input id="o-comentario" type="text" class="input"></label>
 
-      <div style="display:flex;align-items:center;gap:12px;margin-top:8px">
-        <label><input type="checkbox" id="o-confirmado"> Confirmado</label>
-        <label><input type="checkbox" id="o-entregado"> Entregado</label>
+      <div class="contenedor-checkbox">
+        <label class="checkbox">
+          <input type="checkbox" id="o-confirmado">
+          <span class="checkmark"></span>
+          Confirmado
+        </label>
+        <label class="checkbox">
+          <input type="checkbox" id="o-entregado">
+          <span class="checkmark"></span>
+          Entregado
+        </label>
       </div>
     </div>
 
-    <h4 style="margin-top:20px">Artículos</h4>
+    <h4 >Artículos</h4>
     <div class="card">
 
-      <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
-        <div class="typeahead" style="flex:1;position:relative">
+      <div class="contenedor-buscador">
+        <div class="typeahead" >
           <input id="product-search" class="input" placeholder="Buscar producto…">
           <div id="typeahead-list" class="typeahead-list" style="display:none"></div>
         </div>
-        <button id="btn-add-temp" class="btn small">+ Varios</button>
+        <button id="btn-add-temp" class="btn small">+ Crear producto</button>
       </div>
 
-      <table id="items-table" style="width:100%;border-collapse:collapse">
+      <table id="items-table">
         <thead>
           <tr><th>Imagen</th><th>Código</th><th>Nombre</th><th>Cant</th><th>Precio unit.</th><th>Subtotal</th><th></th></tr>
         </thead>
         <tbody></tbody>
       </table>
 
-      <div style="text-align:right;margin-top:10px">
-        <strong>Subtotal: $<span id="calc-subtotal">0</span></strong>
+      <div class="subtotal-final">
+        <strong >Subtotal: $<span id="calc-subtotal">0</span></strong>
       </div>
     </div>
 
-    <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
-      <button id="btn-delete-order" class="btn danger small" style="margin-right:auto;display:none">Eliminar</button>
+    <div >
+      <button id="btn-delete-order" class="btn danger primary">Eliminar</button>
       <button id="modal-save" class="btn primary">Guardar</button>
       <button id="modal-cancel" class="btn ghost">Cancelar</button>
     </div>

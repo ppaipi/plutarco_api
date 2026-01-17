@@ -35,6 +35,9 @@ DIR_TIENDA = "app/tienda"
 ADMIN_USER = os.getenv("ADMIN_USER")
 ADMIN_PASS = os.getenv("ADMIN_PASS")
 API_KEY = os.getenv("API_KEY")
+PURGE_CACHE_URL = os.getenv("PURGE_CACHE_URL")
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
+TOKEN_CLOUDFLARE_API = os.getenv("TOKEN_CLOUDFLARE_API")
 
 # ===============================
 # RUTAS PUBLICAS
@@ -46,7 +49,7 @@ PUBLIC_PATHS = [
     "/images/",
     "/tienda",
     "/",
-    "/orders",  # ⚠️ solo POST público, subrutas protegidas
+    "/orders",  
 ]
 
 # ===============================

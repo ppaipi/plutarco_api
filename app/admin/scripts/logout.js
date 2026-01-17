@@ -1,7 +1,15 @@
 import { TOKEN } from "./config.js";
-import { savePreviousPage } from "./helper.js";
-savePreviousPage();
+function savePreviousPage() {
+  const path = window.location.pathname;
+  const last = localStorage.getItem("previous_page");
 
+  if (path === last) return;
+  if (path.includes("login")) return;
+
+  localStorage.removeItem("previous_page");
+  localStorage.setItem("previous_page", path);
+}
+savePreviousPage();
 document.addEventListener("DOMContentLoaded", () => {
   const logoutBtn = document.getElementById("btn-logout");
 
@@ -19,3 +27,4 @@ if (!TOKEN) {
   savePreviousPage();
   window.location.href = "/login";
 }
+

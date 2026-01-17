@@ -11,6 +11,7 @@ from app.database import init_db
 from app.routes import api_router
 from app.config import API_KEY, PROTECTED_PATHS, PUBLIC_PATHS
 from app.config import IMAGES_DIR
+from app.purge_cache import purgue_cache
 
 
 # ===================== APP =====================
@@ -37,6 +38,11 @@ def startup():
     except Exception as e:
         # nunca frenar el arranque por DB
         print("Error initializing DB:", e)
+    try:
+        purgue_cache()
+    except Exception as e:
+        print("Error purging cache on startup:", e)
+    
 
 
 # ===================== STATIC FILES =====================
@@ -79,10 +85,6 @@ async def api_key_middleware(request: Request, call_next):
         return await call_next(request)
 
     path = request.url.path
-
-    if any(path.startswith(p) for p in PUBLIC_PATHS):
-        return await call_next(request)
-
     if any(path.startswith(p) for p in PROTECTED_PATHS):
         key = request.headers.get("x-api-key")
 
@@ -98,8 +100,14 @@ async def api_key_middleware(request: Request, call_next):
             response.headers["Access-Control-Allow-Headers"] = "*"
 
             return response
+    if any(path.startswith(p) for p in PUBLIC_PATHS):
+        return await call_next(request)
+
 
     return await call_next(request)
+
+
+
 
 
 # ===================== ROUTES =====================

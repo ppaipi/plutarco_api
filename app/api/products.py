@@ -1,5 +1,6 @@
 from fastapi import status, APIRouter, HTTPException, Query, Body
 from fastapi import Form, UploadFile, File
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from pydantic import BaseModel
 from app.models import Product
@@ -68,7 +69,57 @@ def api_enabled():
             .where(Product.habilitado == True)
             .order_by(Product.orden.asc())
         ).all()
+    
 
+@router.get("/catalogo")
+def catalogo_facebook():
+
+    with get_session() as s:
+        productos = s.exec(
+            select(Product)
+            .where(Product.habilitado == True)
+            .order_by(Product.orden.asc())
+        ).all()
+
+    output = io.StringIO()
+
+    writer = csv.writer(output)
+
+    writer.writerow([
+        "id",
+        "title",
+        "description",
+        "availability",
+        "condition",
+        "price",
+        "link",
+        "image_link",
+        "brand"
+    ])
+
+    for p in productos:
+
+        writer.writerow([
+            p.codigo,                         # id
+            p.nombre,                         # title
+            p.descripcion or "",              # description
+            "in stock",                       # availability
+            "new",                            # condition
+            f"{p.precio:.2f} ARS",            # price
+            f"https://plutarcoalmacen.com.ar/",          # link
+            f"https://plutarcoalmacen.com.ar{p.imagen_url}" if p.imagen_url else "",               # image
+            "Plutarco"                             # brand
+        ])
+
+    output.seek(0)
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": "attachment; filename=catalogo_facebook.csv"
+        }
+    )
 
 @router.get("/by-codigo/{codigo}", response_model=Product)
 def api_get_by_codigo(codigo: str):

@@ -10,3 +10,4 @@ mysql-connector-python
 requests
 alembic
 Pillow
+alembic

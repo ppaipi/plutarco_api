@@ -1,13 +1,6 @@
-from sqlmodel import create_engine
-from sqlalchemy import text
+from sqlmodel import SQLModel
+from app.db import engine   # o donde esté tu engine
 
-DATABASE_URL = "sqlite:///data/pedidos_productos.db"
-
-engine = create_engine(DATABASE_URL)
-
-with engine.connect() as conn:
-    conn.execute(text("DROP TABLE IF EXISTS product"))
-    conn.commit()
-
-print("Tabla product eliminada correctamente")
-
+@app.on_event("startup")
+def on_startup():
+    SQLModel.metadata.create_all(engine)

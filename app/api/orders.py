@@ -54,7 +54,7 @@ def generar_html_pedido(order: Order) -> str:
     html = f"""
     <div style="max-width: 600px; margin: 20px auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color:
     #333; background: #ffffff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-        <h2 style="text-align:center;">📦 Pedido #${order.id} | Plutarco Almacén 🥖</h2>
+        <h2 style="text-align:center;">📦 Pedido #{order.id} | Plutarco Almacén 🥖</h2>
         <div style="background: #f7f9fc; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e3e6eb;">
             <p><strong>Nombre:</strong> {order.nombre_completo}</p>
             <p><strong>Email:</strong> {order.correo}</p>
@@ -167,6 +167,7 @@ def api_create_order(payload: dict):
         costo_envio_real=float(payload.get("costo_envio_real", 0)),
         confirmado=bool(payload.get("confirmado", False)),
         entregado=bool(payload.get("entregado", False)),
+        empleado_asignado=payload.get("empleado_asignado", [0,1])
     )
 
     productos_payload = payload.get("productos", [])
@@ -234,39 +235,40 @@ def api_update_order(order_id: int, payload: dict):
         order.costo_envio_real = int(payload.get("costo_envio_real", order.costo_envio_real))
         order.confirmado = bool(payload.get("confirmado", order.confirmado))
         order.entregado = bool(payload.get("entregado", order.entregado))
+        order.empleado_asignado = payload.get("empleado_asignado", order.empleado_asignado)
+        productos = payload.get("productos", [])
 
         # -------------------------
         # REEMPLAZAR PRODUCTOS
         # -------------------------
-        if "items" in payload:     # <--- AHORA SÍ
-            # borrar productos anteriores
-            old_items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
-            for it in old_items:
-                s.delete(it)
-            s.commit()
+        # borrar productos anteriores
+        old_items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
+        for it in old_items:
+            s.delete(it)
+        s.commit()
 
-            # cargar nuevos ítems
-            for p in payload["items"]:
-                product_db = None
-                if p.get("codigo"):
-                    product_db = s.exec(select(Product).where(Product.codigo == p["codigo"])).first()
+        # cargar nuevos ítems
+        for p in productos:
+            product_db = None
+            if p.get("codigo"):
+                product_db = s.exec(select(Product).where(Product.codigo == p["codigo"])).first()
 
-                op = OrderProduct(
-                    codigo=p.get("codigo") or (product_db.codigo if product_db else "GENERIC"),
-                    order_id=order.id,
-                    product_id=product_db.id if product_db else None,
-                    nombre=p.get("nombre") or (product_db.nombre if product_db else ""),
-                    cantidad=int(p.get("cantidad", 1)),
-                    precio_unitario=float(p.get("precio_unitario", 0)),
-                )
-                s.add(op)
+            op = OrderProduct(
+                codigo=p.get("codigo") or (product_db.codigo if product_db else "GENERIC"),
+                order_id=order.id,
+                product_id=product_db.id if product_db else None,
+                nombre=p.get("nombre") or (product_db.nombre if product_db else ""),
+                cantidad=int(p.get("cantidad", 1)),
+                precio_unitario=float(p.get("precio_unitario", 0)),
+            )
+            s.add(op)
 
         s.commit()
         recompute_order_totals(s, order)
 
-        items = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
+        productos = s.exec(select(OrderProduct).where(OrderProduct.order_id == order.id)).all()
 
-        return {"order": order, "productos": items}
+        return {"order": order, "productos": productos}
 
 
 # -------------------------
@@ -441,6 +443,7 @@ async def api_import_orders_excel(file: UploadFile = File(...)):
                     entregado=str(row.get("entregado", "")).strip().upper()=="TRUE",
                     subtotal=int(subtotal),
                     total=int(subtotal + envio_cobrado),
+                    empleado_asignado=[1,2]
                 )
 
                 s.add(order)

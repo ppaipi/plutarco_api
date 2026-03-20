@@ -7,11 +7,13 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from app.startup.backup import backup_sqlite
+from app.startup.purge_cache import purgue_cache
+
 from app.database import init_db
 from app.routes import api_router
 from app.config import API_KEY, PROTECTED_PATHS, PUBLIC_PATHS
 from app.config import IMAGES_DIR
-from app.purge_cache import purgue_cache
 
 
 # ===================== APP =====================
@@ -29,20 +31,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # ===================== STARTUP =====================
 @app.on_event("startup")
 def startup():
+    print("🚀 Startup iniciado")
+
     try:
         init_db()
+        print("✅ Base de datos inicializada")
     except Exception as e:
-        # nunca frenar el arranque por DB
-        print("Error initializing DB:", e)
+        print("❌ Error initializing DB:", e)
+
+    # 🔐 BACKUP (no debe frenar el arranque)
+    try:
+        backup_sqlite()
+    except Exception as e:
+        print("⚠️ Backup error:", e)
+
     try:
         purgue_cache()
     except Exception as e:
-        print("Error purging cache on startup:", e)
-    
+        print("⚠️ Cache purge error:", e)
 
 
 # ===================== STATIC FILES =====================
@@ -85,6 +94,8 @@ async def api_key_middleware(request: Request, call_next):
         return await call_next(request)
 
     path = request.url.path
+    if(path.startswith("/orders/") and request.method == "POST"):
+        return await call_next(request)
     if any(path.startswith(p) for p in PROTECTED_PATHS):
         key = request.headers.get("x-api-key")
 

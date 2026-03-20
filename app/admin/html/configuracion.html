@@ -4,6 +4,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="UTF-8">
   <title>Configuración — Panel Admin Plutarco</title>
+  <link rel="icon" type="image/jpeg" href="/media_static/icon_admin.ico">
 <link rel="stylesheet" href="/static/styles/styles.css">
 <link rel="stylesheet" href="/static/styles/configuracion.style.css">
 </head>
@@ -21,6 +22,26 @@
   </div>
 </header>
 <main class="container">
+  <section class="card card-section">
+    <h2>Estado de la Tienda</h2>
+    <div>
+      <label for="config-store-status">Tienda Abierta</label>
+      <input type="checkbox" id="config-store-status" />
+      <input type="text" id="store-status-msg" class="msg"/>
+    </div>
+  </section>
+<section class="container">
+  <section class="card card-section" style="width:100%">
+    <h2>Empleados disponibles</h2>
+
+    <div id="employees-container"></div>
+
+    <button id="btn-add-employee" class="btn small">+ Agregar empleado</button>
+
+    <input id="config-employees-data" type="hidden">
+  </section>
+</section>
+
 
   <section class="card card-section">
     <h2>Envío — Tarifas por km</h2>

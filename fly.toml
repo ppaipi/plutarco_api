@@ -15,15 +15,16 @@ primary_region = 'gru'
 
 
 [[vm]]
-  memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
-  memory_mb = 1024
+  memory_mb = 256
 
-[mounts]
-  source="data"
-  destination="/data"
-  
+[[mounts]]
+  source = "data"
+  destination = "/data"
+
+[deploy]
+
 [experimental]
   auto_rollbacks = true
 

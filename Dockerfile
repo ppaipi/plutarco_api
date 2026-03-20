@@ -9,7 +9,7 @@ WORKDIR /app
 
 # dependencias del sistema
 RUN apt-get update \
- && apt-get install -y --no-install-recommends build-essential gcc libpq-dev \
+ && apt-get install -y --no-install-recommends build-essential gcc libpq-dev postgresql-client \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/*
 
@@ -21,10 +21,6 @@ RUN pip install -r requirements.txt
 
 # copiar el resto del código
 COPY . .
-
-# crear carpeta para la base de datos (el volumen hará mount en /data)
-RUN mkdir -p /data
-RUN chmod 755 /data
 
 # puerto que usa fly (env PORT)
 ENV PORT=8080

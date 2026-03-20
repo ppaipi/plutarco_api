@@ -6,8 +6,8 @@ const inputCategoryInput = document.getElementById("config-category-input");
 const inputSubcategoryInput = document.getElementById("config-subcategory-input");
 const btnAddCategory = document.getElementById("btn-add-category");
 const btnAddSubcategory = document.getElementById("btn-add-subcategory");
-const btnLogout = document.getElementById("btn-logout");
-const btnTheme = document.getElementById("theme-toggle");
+const inputStoreStatus = document.getElementById("config-store-status");
+const msgStoreStatus = document.getElementById("store-status-msg");
 const tariffsTable = document.getElementById('tariffs-table');
 const btnAddTariff = document.getElementById('btn-add-tariff');
 const daysListEl = document.getElementById('days-list');
@@ -41,13 +41,13 @@ async function fetchCategoriesLists(){
     const headers = {};
     if (api_key) headers['x-api-key'] = api_key;
 
-    const res1 = await fetch(window.location.origin + '/products/categories', { headers });
+    const res1 = await fetch(API_URL + 'products/categories', { headers });
     const cats = res1.ok ? await res1.json() : [];
     const dl = document.getElementById('categories-list');
     dl.innerHTML = '';
     cats.forEach(c=> dl.appendChild(new Option(c)));
 
-    const res2 = await fetch(window.location.origin + '/products/subcategories', { headers });
+    const res2 = await fetch(API_URL + 'products/subcategories', { headers });
     const subs = res2.ok ? await res2.json() : [];
     const dl2 = document.getElementById('subcategories-list');
     dl2.innerHTML = '';
@@ -94,6 +94,12 @@ async function fetchConfig() {
         <input type="time" data-cutoff value="${found.cutoff || ''}">`;
       daysListEl.appendChild(row);
     }
+    // store status
+    inputStoreStatus.checked = config.status !== false;
+    msgStoreStatus.value = config.mensage_status || '';
+
+    //empleados
+    initEmpleados(config || {});
 
     // categorias / subcategorias
     // set order inputs as comma separated values
@@ -110,6 +116,80 @@ async function fetchConfig() {
     showMsg(msgConfig, "⚠️ No se pudo cargar: " + err.message, false);
   }
 }
+
+// ============ CONFIG EMPLEADOS (FUENTE DE VERDAD) ============
+
+const employeesContainer = document.getElementById('employees-container');
+const addEmployeeBtn = document.getElementById('btn-add-employee');
+const hiddenEmployeesInput = document.getElementById('config-employees-data');
+
+let empleados = [];
+
+/**
+ * Renderiza la lista de empleados
+ */
+function renderEmpleados() {
+  employeesContainer.innerHTML = '';
+
+  empleados.forEach((nombre, index) => {
+    const row = document.createElement('div');
+    row.className = 'empleado-row';
+
+    row.innerHTML = `
+      <input
+        type="text"
+        class="input empleado-name"
+        value="${nombre}"
+        placeholder="Nombre del empleado"
+      >
+      <button class="small-btn btn-remove">Eliminar</button>
+    `;
+
+    // editar nombre
+    row.querySelector('.empleado-name').addEventListener('input', (e) => {
+      empleados[index] = e.target.value;
+      syncHiddenInput();
+    });
+
+    // eliminar
+    row.querySelector('.btn-remove').addEventListener('click', () => {
+      empleados.splice(index, 1);
+      syncHiddenInput();
+      renderEmpleados();
+    });
+
+    employeesContainer.appendChild(row);
+  });
+
+  syncHiddenInput();
+}
+
+/**
+ * Agrega un empleado vacío
+ */
+addEmployeeBtn.addEventListener('click', () => {
+  empleados.push('');
+  renderEmpleados();
+});
+
+/**
+ * Sincroniza con el input hidden
+ */
+function syncHiddenInput() {
+  hiddenEmployeesInput.value = JSON.stringify(
+    empleados.filter(e => e.trim() !== '')
+  );
+}
+
+/**
+ * Inicializar desde config
+ */
+function initEmpleados(config) {
+  if (!config || !Array.isArray(config.empleados)) return;
+  empleados = [...config.empleados];
+  renderEmpleados();
+}
+
 
 async function saveConfig() {
   if (!api_key) {
@@ -132,6 +212,11 @@ async function saveConfig() {
     const cutoff = row.querySelector('[data-cutoff]').value || '';
     if(enabled){ dias.push({weekday: idx, cutoff}); }
   });
+  const storeStatus = inputStoreStatus.checked;
+  const storeMsg = msgStoreStatus.value || "";
+
+
+  // build payload
 
   const payload = {
     envio_tarifas: tarifas,
@@ -139,6 +224,9 @@ async function saveConfig() {
     orden_categorias: inputCategoryOrder.value.split(',').map(s=>s.trim()).filter(s=>s),
     orden_subcategorias: inputSubcategoryOrder.value.split(',').map(s=>s.trim()).filter(s=>s),
     pedido_minimo: parseFloat(inputMinOrderAmount.value) || 0,
+    status: storeStatus,
+    mensage_status: storeMsg,
+    empleados: empleados
   };
 
   try{

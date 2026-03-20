@@ -17,6 +17,7 @@ const modal = document.getElementById("modal-order");
 const modalTitle = document.getElementById("modal-title");
 const modalSave = document.getElementById("modal-save");
 const modalCancel = document.getElementById("modal-cancel");
+const modalCard = document.getElementById("modal-card");
 const btnDeleteOrder = document.getElementById("btn-delete-order");
 
 // order fields
@@ -31,6 +32,7 @@ const fEnvio = document.getElementById("o-envio");
 const fCostoEnvio = document.getElementById("o-costo-envio");
 const fTotal = document.getElementById("o-total"); // NUEVO
 const fComentario = document.getElementById("o-comentario"); // NUEVO
+const fEmpleadoAsignado = document.getElementById("o-empleado-asignado"); // NUEVO
 const fConfirmado = document.getElementById("o-confirmado");
 const fEntregado = document.getElementById("o-entregado");
 
@@ -40,6 +42,8 @@ const itemsTableBody = document.querySelector("#items-table tbody");
 const calcSubtotal = document.getElementById("calc-subtotal");
 const btnAddTemp = document.getElementById("btn-add-temp");
 const btnPrintSome = document.getElementById("print-some");
+
+let empleadosMap = {}; // id -> name
 
 // Base API URL (usar absoluta para evitar redirecciones http/https)
 import API_URL from "./config.js";
@@ -308,6 +312,7 @@ if (btnNewOrder) btnNewOrder.addEventListener('click', ()=>{
   if (fEnvio) fEnvio.value = '';
   if (fCostoEnvio) fCostoEnvio.value = '';
   if (fComentario) fComentario.value = '';
+  if (fEmpleadoAsignado) fEmpleadoAsignado.value = '';
   if (fConfirmado) fConfirmado.checked = false;
   if (fEntregado) fEntregado.checked = false;
   items = [];
@@ -374,6 +379,13 @@ async function openEdit(order){
   if (fCostoEnvio) fCostoEnvio.value = order.costo_envio_real || 0;
   if (fTotal) fTotal.value = order.total || 0;
   if (fComentario) fComentario.value = order.comentario || '';
+  if (fEmpleadoAsignado) {
+    // Seleccionar múltiples empleados
+    const empleados = Array.isArray(order.empleado_asignado) ? order.empleado_asignado : [];
+    Array.from(fEmpleadoAsignado.options).forEach(opt => {
+      opt.selected = empleados.includes(opt.value);
+    });
+  }
   if (fConfirmado) fConfirmado.checked = !!order.confirmado;
   if (fEntregado) fEntregado.checked = !!order.entregado;
   if (btnDeleteOrder) btnDeleteOrder.style.display = 'inline-block';
@@ -384,19 +396,21 @@ async function openEdit(order){
     items = order_fetch.items || [];
     renderItemsTable();
     openModalUI();
-    modal.scrollTo(0,0);
+    modalCard.scrollTop = 0;
+    setTimeout(() => {
+      modalCard.scrollTop = 0;
+    }, 50);
 }
   catch(e){
     console.error(e);
     alert('Error cargando pedido: ' + (e.message||e));
   }
-}
+  }
 
 function openModalUI(){
   if (!modal) return;
   modal.style.display = 'flex';
   modal.setAttribute('aria-hidden','false');
-  if (productSearch) productSearch.focus();
 }
 function closeModalUI(){
   if (!modal) return;
@@ -644,6 +658,11 @@ if (btnImportExcel && fileExcel) {
  
  // ===================== SAVE modal (create or update) =====================
 if (modalSave) modalSave.addEventListener('click', async ()=>{
+  // Obtener múltiples empleados seleccionados
+  const empleadosSeleccionados = fEmpleadoAsignado 
+    ? Array.from(fEmpleadoAsignado.selectedOptions).map(opt => opt.value).filter(v => v) 
+    : [];
+
   const payload = {
     nombre_completo: fNombre ? fNombre.value : '',
     correo: fCorreo ? fCorreo.value : '',
@@ -655,13 +674,14 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
     comentario: fComentario ? fComentario.value : '',
     confirmado: Boolean(fConfirmado ? fConfirmado.checked : false),
     entregado: Boolean(fEntregado ? fEntregado.checked : false),
+    empleado_asignado: empleadosSeleccionados,
   };
 
   try{
     if (editingOrderId) {
       const fullPayload = {
         ...payload,
-        items: items.map(it => ({
+        productos: items.map(it => ({
           codigo: it.codigo || "",
           nombre: it.nombre || "",
           cantidad: Number(it.cantidad || 1),
@@ -686,7 +706,7 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
      } else {
        const newPayload = {
          ...payload,
-         items: items.map(it => ({
+         productos: items.map(it => ({
            codigo: it.codigo || "",
            nombre: it.nombre || "",
            cantidad: Number(it.cantidad || 1),
@@ -772,6 +792,39 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
   // seleccionar automáticamente el último mes
   if (arr.length > 0) select.value = arr[0];
 }
+async function loadEmpleadosName() {
+  try{
+    const headers = {};
+    if (token) headers['x-api-key'] = token;
+
+    const res = await fetch(API_URL + "config/empleados", { method: 'GET', headers });
+    if(!res.ok){
+      const txt = await res.text().catch(()=> '');
+      throw new Error(txt || res.status);
+    }
+    const data = res.status === 204 ? {} : await res.json();
+
+    // data viene como { "empleados": { "1": "Juan", "2": "María" } }
+    const empleadosObj = data.empleados || {};
+
+    empleadosMap = empleadosObj; // { "1": "Juan", "2": "María" }
+
+    // Populate select con empleados
+    if (fEmpleadoAsignado) {
+      fEmpleadoAsignado.innerHTML = '<option value="">-- Ninguno --</option>';
+      Object.entries(empleadosMap).forEach(([id, nombre]) => {
+        const opt = document.createElement('option');
+        opt.value = id; // Guardar el ID
+        opt.textContent = nombre; // Mostrar el nombre
+        fEmpleadoAsignado.appendChild(opt);
+      });
+    }
+
+  }catch(e){
+    console.error('Error cargando empleados:', e);
+    empleadosMap = {};
+  }
+}
 
 // pagination & filters
 if (btnLoadMore) btnLoadMore.addEventListener('click', ()=> { page++; render(); });
@@ -784,6 +837,7 @@ if (filterSort) filterSort.addEventListener("change", () => { page = 0; render()
 // init
 (async () => {
   await loadOrders();   // << aseguramos que orders ya está cargado
+  await loadEmpleadosName(); // << cargar empleados ANTES de renderizar
   populateMonths();      // << ahora sí hay meses
   render();              // << y recién acá renderizamos
 })();

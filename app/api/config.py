@@ -14,7 +14,8 @@ def get_envio_config():
         config = s.exec(select(Configuracion).where(Configuracion.id == 1)).first()
         if not config:
             raise HTTPException(status_code=404, detail="Configuración no encontrada")
-
+        if config.empleados is None or {}:
+            config.empleados = {"Empleado 1", "Empleado 2"}  # Valor por defecto
         # Retornar estructura nueva: envio_tarifas, dias_entrega, orden_categorias, orden_subcategorias, pedido_minimo
         return {
             "id": config.id,
@@ -23,7 +24,23 @@ def get_envio_config():
             "orden_categorias": config.orden_categorias,
             "orden_subcategorias": config.orden_subcategorias,
             "pedido_minimo": config.pedido_minimo,
+            "status": config.status,
+            "mensage_status": config.mensage_status,
+            "empleados": config.empleados or {}
         }
+@router.get("/empleados")
+def get_empleados():
+    with get_session() as s:
+        config = s.exec(select(Configuracion).where(Configuracion.id == 1)).first()
+        if not config:
+            raise HTTPException(status_code=404, detail="Configuración no encontrada")
+        if config.empleados == {}:
+            config.empleados = {"Empleado 1", "Empleado 2"}  # Valor por defecto
+
+        return {
+            "empleados": config.empleados or {}
+        }
+    
 
 
 # PUT /config/envio - Actualiza configuración de envío (id=1)
@@ -41,10 +58,13 @@ async def update_envio_config(payload: dict):
                 orden_categorias=payload.get("orden_categorias", []),
                 orden_subcategorias=payload.get("orden_subcategorias", []),
                 pedido_minimo=payload.get("pedido_minimo", 0),
+                status=payload.get("status", True),
+                mensage_status=payload.get("mensage_status", ""),
+                empleados=payload.get("empleados", {})
             )
         else:
             # Actualizar solo campos permitidos
-            allowed_keys = {"envio_tarifas", "dias_entrega", "orden_categorias", "orden_subcategorias", "pedido_minimo"}
+            allowed_keys = {"envio_tarifas", "dias_entrega", "orden_categorias", "orden_subcategorias", "pedido_minimo", "status", "mensage_status", "empleados"}
             for key, value in payload.items():
                 if key in allowed_keys:
                     setattr(config, key, value)
@@ -61,6 +81,9 @@ async def update_envio_config(payload: dict):
             "orden_categorias": config.orden_categorias,
             "orden_subcategorias": config.orden_subcategorias,
             "pedido_minimo": config.pedido_minimo,
+            "status": config.status,
+            "mensage_status": config.mensage_status,
+            "empleados": config.empleados or {}
         }
 
 
@@ -112,6 +135,10 @@ async def init_config(payload: dict = None):
                 dias_entrega=payload.get("dias_entrega", []) if payload else [],
                 orden_categorias=payload.get("orden_categorias", []) if payload else [],
                 orden_subcategorias=payload.get("orden_subcategorias", []) if payload else [],
+                pedido_minimo=payload.get("pedido_minimo", 0) if payload else 0,
+                status=payload.get("status", True) if payload else True,
+                mensaje_status=payload.get("mensaje_status", "") if payload else "",
+                empleados=payload.get("empleados", {}) if payload else {},
             )
         else:
             # Actualizar con valores de payload o mantener vacíos
@@ -120,6 +147,10 @@ async def init_config(payload: dict = None):
                 config.dias_entrega = payload.get("dias_entrega", config.dias_entrega or [])
                 config.orden_categorias = payload.get("orden_categorias", config.orden_categorias or [])
                 config.orden_subcategorias = payload.get("orden_subcategorias", config.orden_subcategorias or [])
+                config.pedido_minimo = payload.get("pedido_minimo", config.pedido_minimo or 0)
+                config.status = payload.get("status", config.status if config.status is not None else True)
+                config.mensage_status = payload.get("mensaje_status", config.mensage_status or "")
+                config.empleados = payload.get("empleados", config.empleados or {})
 
         s.add(config)
         s.commit()
@@ -134,4 +165,7 @@ async def init_config(payload: dict = None):
             "orden_categorias": config.orden_categorias,
             "orden_subcategorias": config.orden_subcategorias,
             "pedido_minimo": config.pedido_minimo,
+            "status": config.status,
+            "mensage_status": config.mensage_status,
+            "empleados": config.empleados or {}
         }

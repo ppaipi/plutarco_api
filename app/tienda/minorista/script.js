@@ -14,6 +14,8 @@ let pedidoMinimo = false
 let cantidadMinima = configuracion.pedido_minimo || 0;
 let diasEntregaConfig = [];
 let preciosEnvioConfig = [];
+let estadoTienda = true;
+let mensajeEstado = "";
 let autocomplete; 
 const LOCAL_ADDRESS = 'Ibera 3852, Coghlan, CABA, Argentina.';
 let ordenCategorias = [];
@@ -62,6 +64,8 @@ async function loadconfig(){
     cantidadMinima = configuracion.pedido_minimo || 0;
     ordenCategorias = configuracion.orden_categorias || ordenCategorias;
     ordenSubCategorias = configuracion.orden_subcategorias || ordenSubCategorias;
+    estadoTienda = configuracion.status !== false;
+    mensajeEstado = configuracion.mensage_status || "";
     console.log("Configuración cargada:", configuracion);
     cargarDiasEntrega();
   } catch (err) {
@@ -1474,33 +1478,46 @@ function toggleZoom(idImagen) {
   closeBtn.onclick = () => closeZoom(clone);
 }
 
-
-
-
-
-window.onload = () => {
-  loadProducts();
-  loadconfig();
+function mostrarMensajeEstado(){
+  const divEstado = document.getElementById("status-div");
+  if(divEstado){divEstado.classList.toggle("oculto");}
+  const estadoTitle = document.getElementById("status-title");
+  const estadoMensaje = document.getElementById("status-msg");
+  if(estadoTitle) {estadoTitle.textContent = "Tienda pausada";}
+  if(estadoMensaje) {estadoMensaje.innerHTML = mensajeEstado} 
   
-  initAutocomplete();
+}
 
-  const searchInput = document.getElementById('search-input');
-  const clickHeader = document.getElementById('click_header');
-  const botonContacto = document.getElementById("btn-contacto-tienda");
-  if (searchInput) {
-    searchInput.addEventListener('input', () => searchProduct());
+
+
+window.onload = async () => {
+  await loadconfig();
+  if(estadoTienda){
+    loadProducts();
+    initAutocomplete();
+    const searchInput = document.getElementById('search-input');
+    const clickHeader = document.getElementById('click_header');
+    const botonContacto = document.getElementById("btn-contacto-tienda");
+    if (searchInput) {
+      searchInput.addEventListener('input', () => searchProduct());
+    }
+    if (clickHeader) {
+      clickHeader.onclick = () => {
+        indiceCategoria = '';
+        currentFilter = 'Todas';
+        filteredProducts = [...products];
+        renderProductsByCategory(filteredProducts);
+      };
+    }
+    if (botonContacto) {
+      botonContacto.classList.toggle("oculto");
+    }
   }
-  if (clickHeader) {
-    clickHeader.onclick = () => {
-      indiceCategoria = '';
-      currentFilter = 'Todas';
-      filteredProducts = [...products];
-      renderProductsByCategory(filteredProducts);
-    };
+  else{
+    mostrarMensajeEstado();
   }
-  if (botonContacto) {
-    botonContacto.classList.toggle("oculto");
-  }
+
+
 
 }
 

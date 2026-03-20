@@ -17,7 +17,7 @@ def purgue_cache():
 
         response = requests.post(PURGE_CACHE_URL, headers=headers, json=data)
         if response.ok:
-            print("✅ Caché purgueado correctamente.\nRespuesta:", response.json())
+            print("✅ Caché purgueado correctamente.")
         else:
             print(f"❌ Error al purgar caché: {response.status_code} | {response.text}")
     except Exception as e:

@@ -135,7 +135,7 @@ input[type=checkbox]{
 .btn.ghost{ border:none; color:var(--muted); background:none; }
 
 .btn.primary{
-  margin: 5px;
+  margin: 5px !important;
   background:linear-gradient(90deg,var(--primary),#2aa0ff);
   color:#fff;
   border:none;
@@ -302,7 +302,8 @@ input[type=checkbox]{
 }
 
 .modal-card {
-  width: 100%;
+  width: 95%;
+  height: 90%;
   max-width: 920px;
   max-height: 92vh;
   padding: 20px;
@@ -376,8 +377,8 @@ input[type=checkbox]{
   text-align: center;
 }
 .item-img{
-  width: 80px;
-  height: 80px;
+  width: 100px;
+  height: 100px;
   border-radius: 8px;
   object-fit: cover;
   flex-shrink: 0;
@@ -596,9 +597,11 @@ input[type=checkbox]{
   }
 
   .item-eliminar {
+    margin: auto;
     grid-area: eliminar;
     font-size: 17px !important;
     margin-top: 15px;
+    width: 100% !important;
   }
   .item-cantidad,
   .item-precio_unitario {
@@ -616,10 +619,6 @@ input[type=checkbox]{
     padding: 0;
     border: none;
     font-size: 13px;
-  }
-
-  #items-table td:last-child {
-    justify-self: end;
   }
 }
 

@@ -13,7 +13,10 @@ savePreviousPage();
 document.addEventListener("DOMContentLoaded", () => {
   const logoutBtn = document.getElementById("btn-logout");
 
-  if (!logoutBtn) return;
+  if (!logoutBtn){
+    console.warn("Logout button not found");
+    return;
+  }
 
   logoutBtn.addEventListener("click", async () => {
     sessionStorage.removeItem("token");

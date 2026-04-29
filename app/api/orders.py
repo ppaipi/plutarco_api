@@ -41,71 +41,254 @@ def enviar_mail(to: str, subject: str, html: str):
     return True
 
 def generar_html_pedido(order: Order) -> str:
+
+    # --- Productos ---
     productos_html = ""
     for p in order.productos:
-        productos_html += f"""
-        <tr>
-            <td style="padding:6px;">{p.cantidad}</td>
-            <td style="padding:6px;">{p.nombre}</td>
-            <td style="padding:6px;">${int(p.precio_unitario or 0)}</td>
-            <td style="padding:6px; text-align:right;">${int((p.cantidad or 0) * (p.precio_unitario or 0))}</td>
-        </tr>
-        """
-    html = f"""
-    <div style="max-width: 600px; margin: 20px auto; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color:
-    #333; background: #ffffff; padding: 25px; border-radius: 16px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-        <h2 style="text-align:center;">📦 Pedido #{order.id} | Plutarco Almacén 🥖</h2>
-        <div style="background: #f7f9fc; padding: 15px 20px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e3e6eb;">
-            <p><strong>Nombre:</strong> {order.nombre_completo}</p>
-            <p><strong>Email:</strong> {order.correo}</p>
-            <p><strong>Teléfono:</strong> {order.telefono}</p>
-            <p><strong>Dirección:</strong> {order.direccion}</p>
-            <p><strong>Día de entrega:</strong> {recompute_date_args(order.dia_entrega)}</p>
-            {"<p><strong>Comentario:</strong> " + order.comentario + "</p>" if order.comentario else ""}
-        </div>
-        <table style="width:100%; border-collapse: collapse; font-size: 15px; margin-top:10px; margin-bottom:10px;">
-            <thead>
-                <tr style="background:#f5f5f5;">
-                    <th style="text-align:left; padding:6px;">Cant.</th>
-                    <th style="text-align:left; padding:6px;">Producto</th>
-                    <th style="text-align:left; padding:6px;">Precio</th>
-                    <th style="text-align:right; padding:6px;">Total</th>
-                </tr>
-            </thead>
-            <tbody>
-                {productos_html}
-            </tbody>
-        </table>
-        <div style="margin-top: 20px;">
-        <table style="width:100%; border-collapse: collapse; font-size: 15px;">
-            <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">Subtotal:</td>
-                <td style="padding: 8px; text-align:right; border-bottom: 1px solid #ddd;"><strong>${int(order.subtotal)}</strong></td>
-            </tr>
-            <tr>
-                <td style="padding: 8px; border-bottom: 1px solid #ddd;">Envío:</td>
-                <td style="padding: 8px; text-align:right; border-bottom: 1px solid #ddd;"><strong>${int(order.envio_cobrado)}</strong></td>
-            </tr>
-            <tr>
-                <td style="padding: 10px; font-size: 1.1em; font-weight: bold;">TOTAL:</td>
-                <td style="padding: 10px; text-align:right; font-size: 1.1em; font-weight: bold; color: #1e88e5;">${int(order.total)}</td>
-            </tr>
-        </table>
-        </div>
-        <div style="background: #fff3cd; padding: 16px; border-left: 5px solid #ffcc00; margin-top: 30px; border-radius: 8px;">
-            <h4 style="margin-top: 0;">💸 Información para el pago</h4>
-            <p>Por favor, transferí <strong>${order.total}</strong> al alias <strong>plutarco.almacen</strong></p>
-            <p>Cuenta a nombre de <strong>Dario Chapur</strong>.</p>
-            <p>Una vez realizado el pago, te pedimos que envíes el comprobante a este mismo correo electrónico o a nuestro whatsapp: <a href="https://wa.me/5491150168920?text=Hola Plutarco Almacén! Realicé un pedido de *${order.total}* a nombre de *{order.nombre_completo}*"> 11 5016-8920.</p>
-            <p>Confirmaremos tu pedido una vez recibido el comprobante.</p>
-        </div>
-        <div style="margin-top: 30px; background: #e2e3e5; padding: 14px; border-left: 5px solid #6c757d; border-radius: 8px;">
-            <p>⚠️ En caso de no contar con stock de algún producto, se te notificará y se realizará la devolución del monto correspondiente.</p>
-        </div>
-    </div>
-    """
-    return html
+        subtotal = (p.precio_unitario or 0) * (p.cantidad or 0)
 
+        productos_html += f"""
+        <table width="100%" style="border-bottom:1px solid #e6e0d4;padding:8px 0;">
+          <tr>
+
+            <td width="40" align="center">
+              <div style="
+                background:#1A5C78;
+                color:#fff;
+                border-radius:50%;
+                width:22px;
+                height:22px;
+                line-height:22px;
+                font-size:0.7rem;
+                font-weight:700;
+                margin:auto;
+              ">
+                {p.cantidad}
+              </div>
+            </td>
+
+            <td style="padding-left:8px;">
+              <div style="font-size:0.84rem;color:#333;">
+                {p.nombre}
+              </div>
+              <div style="font-size:0.75rem;color:#6b7280;">
+                ${p.precio_unitario:,.0f} c/u
+              </div>
+            </td>
+
+            <td align="right" style="white-space:nowrap;">
+              <div style="font-size:0.88rem;font-weight:700;color:#124460;">
+                ${subtotal:,.0f}
+              </div>
+            </td>
+
+          </tr>
+        </table>
+        """
+
+    wsp_texto = f"Hola Plutarco Almacén! Realicé el pedido #{order.id} de ${order.total:,.0f} a nombre de {order.nombre_completo}"
+
+    # --- HTML ---
+    html = f"""
+<div style="max-width:580px;margin:24px auto;font-family:'Quicksand','Inter',sans-serif;">
+
+  <!-- HEADER -->
+  <table width="100%" style="background:#1A5C78;border-radius:14px 14px 0 0;padding:18px 22px;">
+    <tr>
+
+      <td width="50">
+        <img src="https://plutarcoalmacen.com.ar/media_static/iconpng.ico" style="width:36px;height:36px;">
+      </td>
+
+      <td style="color:#fff;">
+        <div style="font-size:0.95rem;font-weight:700;">Plutarco Almacén</div>
+        <div style="font-size:0.72rem;color:rgba(255,255,255,0.6);">Coghlan · CABA</div>
+      </td>
+
+      <td align="right">
+        <div style="background:#C8863A;color:#fff;font-size:0.75rem;font-weight:700;padding:4px 12px;border-radius:20px;display:inline-block;">
+          Pedido #{order.id}
+        </div>
+      </td>
+
+    </tr>
+  </table>
+
+  <!-- BODY -->
+  <div style="background:#fff;padding:20px 22px;border-left:1px solid #d4ccbf;border-right:1px solid #d4ccbf;">
+
+    <!-- SUCCESS -->
+    <div style="text-align:center;padding:18px 0;">
+      <div style="
+        width:50px;
+        height:50px;
+        background:#eaf7ef;
+        border-radius:50%;
+        margin:0 auto 12px;
+        font-size:22px;
+        color:#27ae60;
+        text-align:center;
+        line-height:50px;
+        font-weight:700;
+      ">✓</div>
+
+      <h2 style="font-size:1.05rem;color:#124460;margin-bottom:6px;">
+        ¡Tu pedido fue recibido!
+      </h2>
+
+      <p style="font-size:0.84rem;color:#6b7280;">
+        Confirmamos al recibir el pago.
+      </p>
+    </div>
+
+    <hr style="border-top:1px solid #e6e0d4;margin:16px 0;">
+
+    <!-- DATOS -->
+    <div style="font-size:0.7rem;font-weight:700;color:#1A5C78;margin-bottom:10px;">
+      Datos de entrega
+    </div>
+
+    <div style="background:#F4F0E8;padding:10px;border-radius:8px;margin-bottom:6px;">
+      <b>Nombre:</b> {order.nombre_completo}
+    </div>
+
+    <div style="background:#F4F0E8;padding:10px;border-radius:8px;margin-bottom:6px;">
+      <b>Teléfono:</b> {order.telefono}
+    </div>
+
+    <div style="background:#F4F0E8;padding:10px;border-radius:8px;margin-bottom:6px;">
+      <b>Día:</b> {recompute_date_args(order.dia_entrega)}
+    </div>
+
+    <div style="background:#F4F0E8;padding:10px;border-radius:8px;margin-bottom:6px;">
+      <b>Email:</b> {order.correo}
+    </div>
+
+    <div style="background:#F4F0E8;padding:10px;border-radius:8px;margin-bottom:6px;">
+      <b>Dirección:</b> {order.direccion}
+    </div>
+    
+    <div style="background:#F4F0E8;padding:10px;border-radius:8px;margin-bottom:6px;">
+      <b>Comentario:</b> {order.comentario}
+    </div>
+    
+
+    <hr style="border-top:1px solid #e6e0d4;margin:16px 0;">
+
+    <!-- PRODUCTOS -->
+    <div style="font-size:0.7rem;font-weight:700;color:#1A5C78;margin-bottom:10px;">
+      Productos
+    </div>
+
+    {productos_html}
+
+    <hr style="border-top:1px solid #e6e0d4;margin:16px 0;">
+
+    <!-- Totales -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#fafafa; padding:20px; border-radius:12px; font-family:Arial, sans-serif;">
+  <tr>
+    <td style="font-size:14px; color:#666; padding-bottom:8px;">
+      Subtotal
+    </td>
+    <td align="right" style="font-size:14px; color:#666; padding-bottom:8px;">
+      ${order.subtotal}
+    </td>
+  </tr>
+
+  <tr>
+    <td style="font-size:14px; color:#666; padding-bottom:8px;">
+      Envío
+    </td>
+    <td align="right" style="font-size:14px; color:#666; padding-bottom:8px;">
+      ${order.envio_cobrado}
+    </td>
+  </tr>
+
+  <tr>
+    <td colspan="2" style="padding-top:12px; border-top:2px solid #e6e0d4;"></td>
+  </tr>
+
+  <tr>
+    <td style="font-size:18px; font-weight:bold; color:#124460; padding-top:8px;">
+      Total
+    </td>
+    <td align="right" style="font-size:18px; font-weight:bold; color:#124460; padding-top:8px;">
+      ${order.total}
+    </td>
+  </tr>
+</table>
+
+    <hr style="  border: none;
+        border-top: 1px solid #eee6d8;
+        margin: 24px 0;">
+ 
+    <!-- Info de pago -->
+    <div style="  background: #FFF9F2;
+        border-left: 5px solid #C8863A;
+        border-radius: 4px 12px 12px 4px;
+        padding: 20px;
+        margin: 10px 0;">
+      <h4 style="  font-size: 0.95rem;
+        font-weight: 700;
+        color: #7c4d10;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;">💸 Información de pago</h4>
+      <p style="  font-size: 0.88rem;
+        color: #7c4d10;
+        line-height: 1.6;">Transferí <strong style="color: #8a5e28;">${(order.total)}</strong> al alias <strong>plutarco.almacen</strong> <br>
+        Cuenta a nombre de <strong style="color: #8a5e28;">Darío Chapur</strong>.<br>
+        Envianos el comprobante por
+        <a href="https://wa.me/5491150168920?text={wsp_texto}" target="_blank" style="color: #C8863A; font-weight: 700; text-decoration: none; border-bottom: 1.5px solid ##c8863a;">
+          WhatsApp al 11 5016-8920
+        </a>
+        o respondé el email de confirmación. Confirmamos tu pedido al recibirlo.
+      </p>
+    </div>
+ 
+    <!-- Aviso stock -->
+    <div style="  background: #f9f9f9;
+        border-radius: 8px;
+        padding: 12px 16px;
+        border: 1px dashed #ccc;
+        margin-top: 15px;
+        ">
+      <p style="  font-size: 0.8rem;
+        color: #777;
+        text-align: center;">⚠️ Si algún producto no tiene stock, te avisamos y hacemos la devolución del monto correspondiente.</p>
+    </div>
+ 
+  </div>
+ 
+  <!-- FOOTER -->
+  <div style="  background: #124460;
+    border-radius: 0 0 16px 16px;
+    padding: 30px;
+    text-align: center;">
+    <p style="color: #fff;
+        font-size: 0.85rem;
+        margin-bottom: 20px;">¿Consultas? Escribinos por WhatsApp o respondé el email de confirmación.</p>
+    <a href="https://wa.me/5491150168920?text={wsp_texto}" target="_blank" style="color: #C8863A; font-weight: 700; text-decoration: none; border-bottom: 1.5px solid rgba(200, 134, 58, 0.3);">
+    <button style="  background: #25D366;
+        color: #fff;
+        border: none;
+        padding: 12px 32px;
+        border-radius: 25px;
+        font-size: 0.95rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.2s, opacity 0.8s;
+        ">
+      Consultar por WhatsApp
+    </button>
+    </a>
+  </div>
+ 
+</div>
+"""
+
+    return html
 
 
 def recompute_order_totals(session: Session, order: Order):
@@ -154,6 +337,10 @@ def api_create_order(payload: dict):
     # fecha
     if payload.get("dia_entrega"):
         payload["dia_entrega"] = date.fromisoformat(payload["dia_entrega"])
+    if payload.get("dia_pedido"):
+        payload["dia_pedido"] = date.fromisoformat(payload["dia_pedido"])
+    else:
+        payload["dia_pedido"] = date.today()
 
     order = Order(
         nombre_completo=payload["nombre_completo"],
@@ -161,13 +348,13 @@ def api_create_order(payload: dict):
         telefono=payload.get("telefono", ""),
         direccion=payload.get("direccion", ""),
         comentario=payload.get("comentario", ""),
-        dia_pedido=date.today(),
         dia_entrega=payload.get("dia_entrega"),
+        dia_pedido=payload.get("dia_pedido"),
         envio_cobrado=float(payload.get("envio_cobrado", 0)),
         costo_envio_real=float(payload.get("costo_envio_real", 0)),
         confirmado=bool(payload.get("confirmado", False)),
         entregado=bool(payload.get("entregado", False)),
-        empleado_asignado=payload.get("empleado_asignado", [0,1])
+        empleado_asignado=payload.get("empleado_asignado", ["0","1"])
     )
 
     productos_payload = payload.get("productos", [])
@@ -225,6 +412,11 @@ def api_update_order(order_id: int, payload: dict):
                 order.dia_entrega = date.fromisoformat(payload["dia_entrega"])
             except:
                 raise HTTPException(400, "Fecha inválida")
+        if payload.get("dia_pedido"):
+            try:
+                order.dia_pedido = date.fromisoformat(payload["dia_pedido"])
+            except:
+                raise HTTPException(400, "Fecha de pedido inválida")
 
         order.nombre_completo = payload.get("nombre_completo", order.nombre_completo)
         order.correo = payload.get("correo", order.correo)

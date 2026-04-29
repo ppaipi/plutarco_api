@@ -6,7 +6,7 @@ let currentSearch = '';
 // --- Cargar productos ---
 async function loadProducts() {
   // URL del Google Sheets publicado como CSV
-  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQYR7RFTwXoTMLKy7-jq3D0RUrNpqrMfFBmGh-UmSYhEnVnvxkcZKCB4VLeRg58jw/pub?output=csv";
+  const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRuR4CdI6eVCgVOSn3GrZ4lBcYaQdqOZfKsoySaW4sxJHjXhEuzVw3OXeSAdjo6Oyv3jNJHLPoaIGtG/pub?gid=1313221296&single=true&output=csv";
 
   try {
     // Intentar cargar desde Google Sheets
@@ -15,6 +15,7 @@ async function loadProducts() {
 
     const csvText = await resAll.text();
     products = parseCSV(csvText);
+    loadCategories();
 
   } catch (error) {
     console.warn("No se pudo cargar desde Google Sheets", error);
@@ -22,7 +23,7 @@ async function loadProducts() {
 
   // Copiar a filteredProducts y renderizar
   filteredProducts = [...products];
-  renderProducts(filteredProducts);
+  await renderProducts(filteredProducts);
 
   // Scroll al header
   const header = document.querySelector("header");
@@ -31,6 +32,10 @@ async function loadProducts() {
   }
 }
 
+function loadCategories() {
+  // Esta función se llama para inicializar, pero ahora la renderización
+  // por categorías ocurre en renderProducts()
+}
 
 
 
@@ -49,12 +54,24 @@ function cerrarModalDescripcion() {
   }
 }
 
-function mostrarDescripcionProducto(prod) {
-  crearModalDescripcion(prod);
+async function mostrarDescripcionProducto(prod) {
+  await crearModalDescripcion(prod);
 }
-
+async function imagenUrl(codigo) {
+  try {
+    const response = await fetch(`https://plutarcoalmacen.com.ar/products/img-by-codigo/${codigo}`);
+    if (!response.ok) throw new Error("Error");
+    const data = await response.json();
+    return data.url || "/media_static/placeholder.jpg";
+  } catch {
+    return "/media_static/placeholder.jpg";
+  }
+}
 // Todo el div del producto abre el modal
-function createProductCard(prod) {
+async function createProductCard(prod) {
+  // Obtener la URL correcta de la imagen
+  const imageUrl = await imagenUrl(prod.Codigo).catch(() => "/media_static/placeholder.jpg");
+
   const div = document.createElement('div');
   div.className = 'product';
   div.setAttribute('data-codigo', prod.Codigo);
@@ -95,17 +112,27 @@ function createProductCard(prod) {
     };
   }
 
-  div.innerHTML = `
-    <img 
-      src="/images/${prod.Codigo}.jpg" 
-      alt="${prod.Nombre}" 
-      loading="lazy"
-      style="object-fit: cover;"
-      onerror="this.onerror=null; this.src=this.src.replace('.jpeg', '.jpg'); this.onerror=function(){ this.src='/media_static/placeholder.jpg'; }"
-    >
-    <h3>${prod.Nombre}</h3>
-    <p>$${prod.Precio}</p>
-  `;
+  // Crear imagen con la URL correcta
+  const img = document.createElement('img');
+  img.src = imageUrl;
+  img.alt = prod.Nombre;
+  img.loading = 'lazy';
+  img.style.objectFit = 'cover';
+  img.onerror = function() {
+    this.onerror = null;
+    this.src = this.src.replace('.jpeg', '.jpg');
+    this.onerror = function() { this.src = '/media_static/placeholder.jpg'; };
+  };
+
+  div.appendChild(img);
+
+  const h3 = document.createElement('h3');
+  h3.textContent = prod.Nombre;
+  div.appendChild(h3);
+
+  const p = document.createElement('p');
+  p.textContent = `$${prod.Precio}`;
+  div.appendChild(p);
 
   // Solo abre el modal si el click no es sobre un botón
   div.onclick = (e) => {
@@ -156,12 +183,65 @@ function parseCSV(csvText) {
     const obj = {};
     headers.forEach((h, idx) => {
       const raw = (cols[idx] ?? "").trim();
-      obj[h] = unquote(raw);
+      const value = unquote(raw);
+      obj[h] = parseValue(h, value);
     });
     rows.push(obj);
   }
 
   return rows;
+
+  function parseValue(header, value) {
+    if (typeof value !== 'string') return value;
+    const headerKey = header.toLowerCase();
+
+    if (/precio|total|subtotal|envio|costo/i.test(headerKey)) {
+      const num = parseCurrency(value);
+      return num === null ? value : num;
+    }
+
+    return value;
+  }
+
+  function parseCurrency(value) {
+    let text = value.replace(/\s+/g, '');
+    if (!text) return null;
+
+    // Quitar símbolo de moneda si existe
+    text = text.replace(/^\$/g, '');
+    text = text.replace(/[^0-9.,-]/g, '');
+
+    const hasDot = text.indexOf('.') !== -1;
+    const hasComma = text.indexOf(',') !== -1;
+
+    if (hasDot && hasComma) {
+      // Si ambos existen, asumimos que el separador de decimales es el último que aparece.
+      if (text.lastIndexOf(',') > text.lastIndexOf('.')) {
+        text = text.replace(/\./g, '').replace(/,/g, '.');
+      } else {
+        text = text.replace(/,/g, '');
+      }
+    } else if (hasComma) {
+      const parts = text.split(',');
+      if (parts.length === 2 && parts[1].length === 2) {
+        text = `${parts[0]}.${parts[1]}`;
+      } else {
+        text = text.replace(/,/g, '');
+      }
+    } else if (hasDot) {
+      const parts = text.split('.');
+      if (parts.length === 2 && parts[1].length === 2) {
+        // Formato decimal 4.80
+        text = text;
+      } else {
+        // Punto como separador de miles o múltiple separador
+        text = text.replace(/\./g, '');
+      }
+    }
+
+    const parsed = parseFloat(text);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
 
   function unquote(s) {
     // si viene entre comillas, quítalas y des-escapá comillas dobles
@@ -179,32 +259,62 @@ function parseCSV(csvText) {
 
 
 
-// Renderiza todos los productos (sin categorías ni paginación)
-function renderProducts(productos) {
+// Renderiza productos agrupados por categorías
+async function renderProducts(productos) {
   const container = document.getElementById('product-list');
   container.innerHTML = '';
 
-  const grid = document.createElement('div');
-  grid.className = 'product-grid';
+  // Agrupar productos por categoría
+  const porCategoria = {};
+  productos.forEach(prod => {
+    const cat = (prod.Categoria || 'Sin categoría').trim();
+    if (!porCategoria[cat]) {
+      porCategoria[cat] = [];
+    }
+    porCategoria[cat].push(prod);
+  });
 
-  productos.forEach(prod => grid.appendChild(createProductCard(prod)));
+  // Ordenar categorías alfabéticamente
+  const categorias = Object.keys(porCategoria);
 
-  container.appendChild(grid);
+  // Renderizar cada categoría con sus productos
+  for (const categoria of categorias) {
+    // Crear contenedor de la categoría
+    const categoriaDiv = document.createElement('div');
+    categoriaDiv.className = 'categoria-section';
+
+    // Título de la categoría
+    const titulo = document.createElement('h2');
+    titulo.className = 'categoria-titulo';
+    titulo.textContent = categoria;
+    categoriaDiv.appendChild(titulo);
+
+    // Grid de productos de esta categoría
+    const grid = document.createElement('div');
+    grid.className = 'product-grid';
+
+    // Esperar todas las tarjetas de producto
+    const cards = await Promise.all(porCategoria[categoria].map(prod => createProductCard(prod)));
+    cards.forEach(card => grid.appendChild(card));
+
+    categoriaDiv.appendChild(grid);
+    container.appendChild(categoriaDiv);
+  }
 }
 
 // Buscador simple
-function searchProduct() {
+async function searchProduct() {
   const term = document.getElementById('search-input').value.toLowerCase().trim();
   currentSearch = term;
 
   if (!term) {
     filteredProducts = [...products];
-    renderProducts(filteredProducts);
+    await renderProducts(filteredProducts);
     return;
   }
 
   filteredProducts = products.filter(p => p.Nombre.toLowerCase().includes(term));
-  renderProducts(filteredProducts);
+  await renderProducts(filteredProducts);
 }
 
 function addToCart(codigo) {
@@ -270,14 +380,14 @@ function updateQuantity(codigo, delta) {
   animateCart();
 }
 
-function removeFromCart(codigo) {
+async function removeFromCart(codigo) {
   delete cart[codigo];
-  renderProducts(filteredProducts);
+  await renderProducts(filteredProducts);
   updateCart();
   animateCart();
 }
 
-function updateCart() {
+async function updateCart() {
   const ul = document.getElementById('cart-items');
   if (!ul) return;
   ul.innerHTML = '';
@@ -287,14 +397,15 @@ function updateCart() {
   for (let codigo in cart) {
     const producto = products.find(p => p.Codigo === codigo);
     const cantidad = cart[codigo];
+    const imageUrl = await imagenUrl(producto.Codigo).catch(() => "/media_static/placeholder.jpg");
     const li = document.createElement('li');
     li.innerHTML = `
       <div class="cart-item">
         <img 
           class="thumb"
-          src="/images/${producto.Codigo}.jpeg" 
+          src="${imageUrl}" 
           alt="${producto.Nombre}" 
-          onerror="this.onerror=null; this.src=this.src.replace('.jpeg', '.jpg'); this.onerror=function(){ this.src='/media_static/placeholder.jpg'; }"
+          onerror="this.onerror=null; this.src=this.src.replace('.jpeg', '.jpg'); this.onerror=function(){ this.src='plutarcoalmacen.com.ar/media_static/placeholder.jpg'; }"
           loading="lazy"
           width="80" height="80"
           style="object-fit: cover;">
@@ -317,10 +428,14 @@ function updateCart() {
 
   const total = subtotal;
 
+
   const totalEl = document.getElementById('total');
   const countEl = document.getElementById('cart-count');
   if (totalEl) totalEl.textContent = total;
   if (countEl) countEl.textContent = count;
+  if(document.getElementById('retiro-btn')?.checked) {
+    aplicarDescuento();
+  }
 }
 
 const cart2 = document.getElementById('cart');
@@ -415,6 +530,9 @@ function enviarPedido() {
   }
 
   pedido.total = totalProductos;
+  if (document.getElementById('retiro-btn')?.checked) {
+    pedido.total_descuento = (totalProductos * 0.9);
+  }
 
   const formBody = 'data=' + encodeURIComponent(JSON.stringify(pedido));
 
@@ -422,11 +540,11 @@ function enviarPedido() {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: formBody
-  }).then(response => {
+  }).then(async (response) => {
     if (response.ok) {
       alert('Pedido enviado con éxito!');
       cart = {};
-      renderProducts(filteredProducts);
+      await renderProducts(filteredProducts);
       document.getElementById('name').value = '';
       document.getElementById('email').value = '';
       updateCart();
@@ -445,7 +563,7 @@ function enviarPedido() {
 
 
 // --- Modal descripción producto ---
-function crearModalDescripcion(prod) {
+async function crearModalDescripcion(prod) {
   const oldModal = document.getElementById('modal-descripcion');
   if (oldModal) oldModal.remove();
 
@@ -456,17 +574,21 @@ function crearModalDescripcion(prod) {
   const modalContent = document.createElement('div');
   modalContent.className = 'modal-content modal-content-anim';
 
+  // Obtener la URL correcta de la imagen
+  const imageUrl = await imagenUrl(prod.Codigo).catch(() => "/media_static/placeholder.jpg");
+
   // Imagen grande
   const img = document.createElement('img');
   img.className = 'modal-img';
   img.id = `modal-img-${prod.Codigo}`;
-  img.src = `/images/${prod.Codigo}.jpeg`;
+  img.src = imageUrl;
   img.alt = prod.Nombre;
   img.onerror = function() {
     this.onerror = null;
     this.src = this.src.replace('.jpeg', '.jpg');
     this.onerror = function() { this.src = '/media_static/placeholder.jpg'; };
   };
+
   img.onclick = () => {
     toggleZoom(img.id);
   };
@@ -568,6 +690,53 @@ function crearModalDescripcion(prod) {
   }
   document.addEventListener('keydown', escListener);
 }
+const retiroBtn = document.getElementById('retiro-btn');
+if (retiroBtn) {
+  retiroBtn.addEventListener('change', function () {
+    if (this.checked) {
+      aplicarDescuento();
+    } else {
+      desactivarDescuento();
+    }
+  });
+}
+function desactivarDescuento() {
+  const totalDctoSpan = document.getElementById('total-with-discount');
+  
+  if (totalDctoSpan) {
+    totalDctoSpan.textContent = '0';
+    
+    const contenedorDcto = totalDctoSpan.closest('.total');
+    if (contenedorDcto) {
+      contenedorDcto.classList.add('oculto');
+    }
+  }
+}
+
+
+function aplicarDescuento() {
+  const totalEl = document.getElementById('total');
+  const totalDctoSpan = document.getElementById('total-with-discount');
+  
+  if (!totalEl || !totalDctoSpan) return;
+
+  // Convertimos el texto a número
+  const currentTotal = parseFloat(totalEl.textContent);
+  
+
+  // Calculamos (10% de descuento)
+  const discountedTotal = currentTotal * 0.9;
+  
+  // Escribimos el resultado con 2 decimales
+  totalDctoSpan.textContent = discountedTotal;
+  
+  // IMPORTANTE: Quitamos 'oculto' al PÁRRAFO PADRE
+  const contenedorDcto = totalDctoSpan.closest('.total'); 
+  if (contenedorDcto) {
+    contenedorDcto.classList.remove('oculto');
+  }
+}
+
 
 function toggleZoom(idImagen) {
   const original = document.getElementById(idImagen);

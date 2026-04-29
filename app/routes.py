@@ -21,7 +21,12 @@ api_router = APIRouter()
 @api_router.get("/")
 async def root():
     return FileResponse(os.path.join(DIR_TIENDA + "/minorista", "index.html"))
-
+@api_router.get("/develop")
+async def root():
+    return FileResponse(os.path.join(DIR_TIENDA + "/develop", "index.html"))
+@api_router.get("/sobre-nosotros")
+async def sobre_nosotros():
+    return FileResponse(os.path.join(DIR_TIENDA + "/sobre-nosotros", "index.html"))
 
 # WEB
 api_router.include_router(productos_router, prefix="/productos", tags=["productos"])

@@ -27,7 +27,8 @@ const fTelefono = document.getElementById("o-telefono");
 const fTelefonoWpp = document.getElementById("o-telefono-wpp");
 const fDireccion = document.getElementById("o-direccion");
 const fDireccionMaps = document.getElementById("o-direccion-maps");
-const fDia = document.getElementById("o-dia");
+const fDia = document.getElementById("o-dia-entrega");
+const fDiaPedido = document.getElementById("o-dia-pedido"); 
 const fEnvio = document.getElementById("o-envio");
 const fCostoEnvio = document.getElementById("o-costo-envio");
 const fTotal = document.getElementById("o-total"); // NUEVO
@@ -125,7 +126,8 @@ function toggleButtonDelivered(element, entregado) {
       msdDelivered.className = 'muted';
   }
 }
-async function toggleConfirm(orderId){
+async function toggleConfirm(order){
+  const orderId = order.id;
   const headers = {};
   if (token) headers['x-api-key'] = token;
   const res = await fetch(API_URL + `orders/${orderId}/toggle-confirmed`, { method: 'POST', headers });
@@ -136,8 +138,10 @@ async function toggleConfirm(orderId){
   const confirmado = await res.json().then(data => data.confirmado);
   const msgConfirmed = document.getElementById(`msg-confirmed-${orderId}`);
   toggleButtonConfirm(msgConfirmed, confirmado);
+  order.confirmado = confirmado; 
 }
-async function toggleDelivered(orderId){
+async function toggleDelivered(order){
+  const orderId = order.id;
   const headers = {};
   if (token) headers['x-api-key'] = token;
   const res = await fetch(API_URL + `orders/${orderId}/toggle-delivered`, { method: 'POST', headers });
@@ -148,6 +152,7 @@ async function toggleDelivered(orderId){
   const entregado = await res.json().then(data => data.entregado);
   const msgDelivered = document.getElementById(`msg-delivered-${orderId}`);
   toggleButtonDelivered(msgDelivered, entregado);
+  order.entregado = entregado;
 }
 
 // ===================== RENDER ORDERS =====================
@@ -181,13 +186,10 @@ function render() {
     return true;
   });
 
-  // ORDENACIÓN por fecha
+  // ORDENACIÓN por id
   filtered.sort((a,b)=>{
-    const da = a.dia_pedido || '0000-00-00';
-    const db = b.dia_pedido || '0000-00-00';
-    return sortDir === 'asc'
-      ? da.localeCompare(db)
-      : db.localeCompare(da);
+    if (sortDir === 'asc') return (a.id || 0) - (b.id || 0);
+    else return (b.id || 0) - (a.id || 0);
   });
 
   // PAGINADO
@@ -253,13 +255,16 @@ function render() {
 
     if (msgConfirmed) {
       toggleButtonConfirm(msgConfirmed, o.confirmado);
-      msgConfirmed.onclick = () => { toggleConfirm(o.id); };
+      msgConfirmed.onclick = () => { 
+        toggleConfirm(o); 
+      };
       msgConfirmed.style.cursor = 'pointer';
     }
 
     if (msgDelivered) {
       toggleButtonDelivered(msgDelivered, o.entregado);
-      msgDelivered.onclick = () => { toggleDelivered(o.id); };
+      msgDelivered.onclick = () => { 
+        toggleDelivered(o); };
       msgDelivered.style.cursor = 'pointer';
     }
 
@@ -309,9 +314,11 @@ if (btnNewOrder) btnNewOrder.addEventListener('click', ()=>{
   if (fTelefono) fTelefono.value = '';
   if (fDireccion) fDireccion.value = '';
   if (fDia) fDia.value = '';
+  if (fDiaPedido) fDiaPedido.value = '';
   if (fEnvio) fEnvio.value = '';
   if (fCostoEnvio) fCostoEnvio.value = '';
   if (fComentario) fComentario.value = '';
+  if (fTotal) fTotal.value = '';
   if (fEmpleadoAsignado) fEmpleadoAsignado.value = '';
   if (fConfirmado) fConfirmado.checked = false;
   if (fEntregado) fEntregado.checked = false;
@@ -375,6 +382,7 @@ async function openEdit(order){
   if (fDireccionMaps) fDireccionMaps.href = `https://www.google.com/maps/search/${encodeURIComponent(order.direccion || '')}`;
   if (fDireccion) fDireccion.value = order.direccion || '';
   if (fDia) fDia.value = order.dia_entrega || '';
+  if (fDiaPedido) fDiaPedido.value = order.dia_pedido || '';
   if (fEnvio) fEnvio.value = order.envio_cobrado || 0;
   if (fCostoEnvio) fCostoEnvio.value = order.costo_envio_real || 0;
   if (fTotal) fTotal.value = order.total || 0;
@@ -669,6 +677,7 @@ if (modalSave) modalSave.addEventListener('click', async ()=>{
     telefono: fTelefono ? fTelefono.value : '',
     direccion: fDireccion ? fDireccion.value : '',
     dia_entrega: fDia ? fDia.value || null : null,
+    dia_pedido: fDiaPedido ? fDiaPedido.value || null : null,
     envio_cobrado: Number(fEnvio ? fEnvio.value : 0) || 0,
     costo_envio_real: Number(fCostoEnvio ? fCostoEnvio.value : 0) || 0,
     comentario: fComentario ? fComentario.value : '',

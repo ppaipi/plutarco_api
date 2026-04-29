@@ -128,7 +128,14 @@ def api_get_by_codigo(codigo: str):
         if not prod:
             raise HTTPException(404, "Producto no encontrado")
         return prod
-
+    
+@router.get("/img-by-codigo/{codigo}", response_model=dict)
+def api_get_img_by_codigo(codigo: str):
+    with get_session() as s:
+        prod = get_product_by_codigo(s, codigo)
+        if not prod:
+            raise HTTPException(404, "Producto no encontrado")
+        return {"url": prod.imagen_url or ""}
 
 # -------------------------
 # IMPORTAR PRODUCTOS
@@ -212,6 +219,40 @@ async def import_products(file: UploadFile = File(...)):
     except Exception as e:
         print("Error importing products from excel:", e)
         raise HTTPException(status_code=500, detail="Error importing products")
+@router.post("/import-excel-eliminados", status_code=status.HTTP_201_CREATED)
+async def import_eliminados(file: UploadFile = File(...)):
+    deleted = 0
+    skipped = 0
+    try:
+        content = await file.read()
+        df = pd.read_excel(io.BytesIO(content), engine="openpyxl").fillna("")
+        with get_session() as session:
+            for _, row in df.iterrows():
+                id_product = str(row.get("ID", "")).strip() or None
+                codigo = str(row.get("CODIGO BARRA", "")).strip()
+                if not id_product and not codigo:
+                    skipped += 1
+                    continue
+                existing = get_product_for_import(
+                    session,
+                    product_id=id_product,
+                    codigo=codigo
+                )
+                if existing:
+                    session.delete(existing)
+                    deleted += 1
+                else:
+                    skipped += 1
+            session.commit()
+        return {
+            "deleted": deleted,
+            "skipped": skipped
+        }
+    except Exception as e:
+        print("Error importing deleted products from excel:", e)
+        raise HTTPException(status_code=500, detail="Error importing deleted products")
+    
+
 
 
 @router.post("/import-habilitados", status_code=status.HTTP_201_CREATED)
@@ -416,12 +457,4 @@ def api_get_subcategories():
         print("Error loading subcategories:", e)
         return []
     
-@router.delete("/delete/all")
-def delete_all_products():
-    with get_session() as s:
-        result = s.exec(delete(Product))
-        s.commit()
 
-        return {
-            "deleted": result.rowcount or 0
-        }

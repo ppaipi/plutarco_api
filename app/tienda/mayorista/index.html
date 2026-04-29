@@ -32,7 +32,7 @@
   <meta name="geo.region" content="AR-C">
 
 
-  <link rel="stylesheet" href="/tienda/static/styles.css?v=3">
+  <link rel="stylesheet" href="/tienda/static/styles.css?">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -83,7 +83,15 @@
       <div class="botonStock" >
         <p>⚠️ En caso de no contar con stock de algún producto, se te descontará del total pedido.</p>
       </div>
+      <div class="envio-options">
+        <label>
+          <input type="checkbox" id="retiro-btn">
+          Retiro por Plutarco
+        </label>
+      </div>
       <p class="total">Total: $<span id="total">0</span></p>
+      <p class="total oculto">Total con Descuento: $<span id="total-with-discount">0</span></p>
+
       <button class="finalize-btn" id="submit-btn" onclick="enviarPedido()">Finalizar Pedido</button>
     </section>
     <!-- Botón flotante redondo de WhatsApp -->
@@ -100,6 +108,6 @@
     <p>&copy; 2026 Plutarco Panadería</p>
   </footer>
 
-  <script src="/tienda/static/mayorista/script.js?v=1.0.2"></script>
+  <script src="/tienda/static/mayorista/script.js"></script>
 </body>
 </html>

@@ -235,6 +235,16 @@ header {
   color: black !important;
   font-weight: bold;
 }
+.discount-btn{
+  background-color: var(--color-acento);
+  color: black;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
 
 /* ====== Responsive (móviles) */
 @media (max-width: 768px) {
@@ -1051,6 +1061,72 @@ footer {
   cursor: pointer;
 }
 
+/* ==========================
+   Estilos para el radio button de descuento
+   ========================== */
+#cart .envio-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  margin: 1.2rem 0;
+}
+
+#cart .envio-options label {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.8rem;
+  border-radius: 0.8rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  font-weight: 500;
+  user-select: none;
+}
+
+#cart .envio-options label:hover {
+  background-color: #f0f7ff;
+  border-color: #d0e8ff;
+}
+
+#cart .envio-options input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 24px;
+  height: 24px;
+  border: 2px solid var(--color-primario);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background-color: white;
+  flex-shrink: 0;
+}
+
+#cart .envio-options input[type="checkbox"]:hover {
+  box-shadow: 0 0 8px rgba(30, 136, 229, 0.3);
+}
+
+#cart .envio-options input[type="checkbox"]:checked {
+  background-color: var(--color-primario);
+  box-shadow: 0 0 0 4px rgba(30, 136, 229, 0.15);
+}
+
+#cart .envio-options input[type="checkbox"]:checked::after {
+  content: '✓';
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 0.9rem;
+  font-weight: bold;
+}
+
+#cart .envio-options label:has(input[type="radio"]:checked) {
+  background-color: #e3f2fd;
+  border-color: var(--color-primario);
+  box-shadow: 0 2px 8px rgba(30, 136, 229, 0.15);
+}
+
 @keyframes modalFadeIn {
   from {
     opacity: 0;
@@ -1187,4 +1263,30 @@ footer {
   color: var(--color-gris-oscuro);
   font-size: 1.1rem;
   line-height: 1.5;
+}
+
+/* ==========================
+   Categorías (agrupadas)
+   ========================== */
+.categoria-section {
+  padding: 1.5rem 0;
+}
+
+.categoria-titulo {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--color-primario);
+  margin-bottom: 1.5rem;
+  padding-top: 1rem;
+  text-align: center;
+  text-transform: capitalize;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .categoria-titulo {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    padding-top: 0.8rem;
+  }
 }

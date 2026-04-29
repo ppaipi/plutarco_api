@@ -38,7 +38,9 @@ const modalClose = document.getElementById("modal-close");
 
 // file inputs
 const fileExcel = document.getElementById("file-excel");
+const fileExcelEliminados = document.getElementById("file-excel-eliminados");
 const btnUploadExcel = document.getElementById("btn-upload-excel");
+const btnUploadExcelEliminados = document.getElementById("btn-upload-excel-eliminados");
 const fileJson = document.getElementById("file-json");
 const btnUploadJson = document.getElementById("btn-upload-json");
 const fileCsv = document.getElementById("file-csv");
@@ -162,6 +164,7 @@ function renderList(list) {
           <button class="btn-up">▲</button>
           <button class="btn-down">▼</button>
         </div>
+        <button class="btn-delete">Eliminar</button>
       </div>
     `;
 
@@ -186,12 +189,12 @@ function renderList(list) {
 
       p.orden = v;
 
-      if (!suppressOrderReload) {
-        await loadProducts(true);
-      }
+      
+      await loadProducts(true);
+      
 
     } catch (err) {
-      alert('No se pudo actualizar orden');
+      alert('No se pudo actualizar orden, error: ' + (err.message || err.status || 'desconocido'));
       console.error(err);
     }
   });
@@ -216,7 +219,7 @@ function renderList(list) {
       p.habilitado = isEnabled;
 
     } catch (err) {
-      alert('No se pudo actualizar estado');
+      alert('No se pudo actualizar estado, error: ' + (err.message || err.status || 'desconocido'));
       console.error(err);
       ev.target.checked = !isEnabled; // revertir checkbox si hay error
     }
@@ -379,6 +382,27 @@ fileExcel.addEventListener('change', async (e)=>{
     alert(`Import: ${r.created} creados, ${r.updated} actualizados, ${r.skipped} saltados`);
     await loadProducts(true);
   }catch(err){ console.error(err); alert('Error importando Excel') }
+});
+btnUploadExcelEliminados.addEventListener('click', ()=> fileExcelEliminados.click());
+fileExcelEliminados.addEventListener('change', async (e)=>{
+  if(!confirm('ESTO ELIMINARÁ PRODUCTOS PERMANENTEMENTE, ASEGÚRATE DE TENER UN BACKUP ANTES DE CONTINUAR. ¿Deseas continuar?')) return;
+  const f = e.target.files[0]; if(!f) return;
+  const fd = new FormData(); fd.append('file', f);
+  try{
+    // POST FormData para import eliminados
+    {
+      const path = 'products/import-excel-eliminados'; // sin slash final
+      const headers = {};
+      if(token) headers['x-api-key'] = token;
+      const opts = { method: 'POST', headers, body: fd };
+      const res = await fetch(API_URL + path, opts);
+      if(!res.ok){ const txt = await res.text(); throw new Error(txt || res.status); }
+      var r = res.status === 204 ? null : await res.json();
+    }
+
+    alert(`Import Eliminados: ${r.deleted} eliminados`);
+    await loadProducts(true);
+  }catch(err){ console.error(err); alert('Error importando Excel de eliminados') }
 });
 
 btnUploadJson.addEventListener('click', ()=> fileJson.click());

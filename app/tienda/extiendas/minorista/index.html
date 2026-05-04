@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>🌵 Plutarco Almacén Delivery 🥖 | Panadería y almacén</title>
+  <link rel="icon" type="image/jpeg" href="/media_static/icon.ico">
+
+
+  <meta name="description" content="Plutarco Almacen Delivery: Panadería y comidas saludables, delivery CABA. Pedí pan integral, comidas organicas y productos de almacén con envío. ¡Hace tu pedido online!">
+
+  <meta name="keywords" content="Plutarco Almacen delivery, panadería coghlan, delivery comidas CABA, pan integral, saludable , comidas listas, almacén online, organico">
+
+  <meta name="author" content="Plutarco Almacén">
+
+  <meta property="og:title" content="Plutarco Almacen Delivery | Panadería y comidas en Coghlan">
+  <meta property="og:description" content="Pedí online pan integral, comidas saludables y productos de almacén. Delivery en Coghlan, CABA.">
+  <meta property="og:image" content="https://plutarcoalmacen.com.ar/media_static/icon.ico"> <!-- URL completa de la imagen -->
+  <meta property="og:url" content="https://plutarcoalmacen.com.ar">
+  <meta property="og:type" content="website">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Plutarco Almacen Delivery | Panadería y Almacen">
+  <meta name="twitter:description" content="Pedí online pan integral, comidas saludables y productos de almacén. Delivery en Coghlan, CABA.">
+  <meta name="twitter:image" content="https://plutarcoalmacen.com.ar/media_static/icon.ico">
+
+
+  <meta name="geo.position" content="-34.5618;-58.4753"> <!-- Latitud y longitud aproximadas -->
+  <meta name="geo.placename" content="Plutarco Delivery, Coghlan, CABA, Argentina">
+  <meta name="geo.region" content="AR-C">
+
+  <link rel="canonical" href="https://plutarcoalmacen.com.ar">
+
+  <link rel="stylesheet" href="/tienda/static/styles.css?v=1">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Permanent+Marker&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+
+</head>
+
+<body>
+  
+  <header>
+    <div id="click_header">
+      <div class="logo-titulo">
+      <img src="/media_static/iconpng.ico" alt="Logo">
+      <h1>Plutarco Almacen Delivery  
+      <span>Panadería integral y Almacén Organico</span>  </h1>
+    </div>
+    </div>    <div id="cart-icon-fixed">
+      <button onclick="toggleCart()" id="cart-icon">🛒 <span id="cart-count">0</span></button>
+    </div>
+    <nav id="category-buttons">
+      <div class="dropdown">
+        <button class="dropdown-btn">
+          Categorías <span class="arrow">▼</span>
+        </button>
+        <div class="dropdown-content" id="dropdown-categories"></div>
+      </div>
+      <a href="https://www.plutarcoalmacen.com.ar/sobre-nosotros.html">
+      <button  class="nav-btn">Sobre nosotros</button></a>
+    <button class="nav-btn" onclick="window.open('https://wa.me/5491150168920?text=Hola! Vengo de la pagina web', '_blank')">Contacto</button>
+    </nav>
+
+
+    <div class="search-cart-wrapper">
+      <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Buscar producto..."
+        onkeydown="if(event.key==='Enter') searchProduct();"
+        oninput="searchProduct()">
+         <button onclick="searchProduct()">🔍 Buscar</button>
+      </div>
+    </div>
+    </div>
+  </header>
+
+  <div class="banner-envio" id="banner-envio">
+  <span>⚡ <b>OFERTA LANZAMIENTO!</b> Ahora tenemos <strong>envíos gratis</strong> durante ESTE MES!   🚚 (mínimo $20.000)</span>
+  <button class="cerrar-banner" onclick="document.getElementById('banner-envio').style.display='none'">✖</button>
+</div>
+
+
+  <main>
+    <div id="product-list"></div>
+
+    <section id="cart" class="cart-panel">
+      <button class="close-cart" onclick="toggleCart()">❌</button>
+      <h2>🛒 Carrito de Compras</h2>
+      <ul id="cart-items"></ul>
+
+      <!-- pickup-day ahora igual de estético que los otros inputs -->
+      <div class="inputs">
+        <label for="pickup-day">📅 Día de entrega:</label>
+        <select id="pickup-day" required>
+          <option value="" disabled selected>Seleccionar una fecha</option>
+        </select>
+      </div>
+
+      <div class="inputs">
+        <label for="name">👤 Nombre completo:</label>
+        <input type="text" id="name" placeholder="Tu nombre completo">
+      </div>
+
+      <div class="inputs">
+        <label for="email">📧 Correo electrónico:</label>
+        <input type="email" id="email" placeholder="tuemail@ejemplo.com">
+      </div>
+
+      <div class="inputs">
+        <label for="phone">☎️ Número de teléfono:</label>
+        <input type="tel" id="phone" placeholder="Ej: 11 1234-5678">
+      </div>
+
+      <div class="inputs">
+        <label for="address">📍 Dirección de entrega:</label>
+        <input type="text" id="address" placeholder="Dirección completa">
+      </div>
+
+      <div class="inputs">
+        <label for="comment">💬 Comentario (DEPTO O CASA):</label>
+        <input type="text" id="comment" placeholder="Depto 2B">
+      </div>
+
+      <h4>Método de pago: SOLO TRANSFERENCIA</h4>
+      <div class="botonStock" >
+        <p>⚠️ En caso de no contar con stock de algún producto, se te notificará y se realizará la devolución del monto correspondiente.</p>
+      </div>
+      <p id="envio-msg"></p>
+      <p class="total">Total: $<span id="total">0</span></p>
+      <button class="finalize-btn" id="submit-btn" onclick="enviarPedido()">Finalizar Pedido</button>
+    </section>
+    <!-- Botón flotante redondo de WhatsApp -->
+    <a href="https://wa.me/5491150168920?text=Hola! Vengo de la pagina web" 
+    class="whatsapp-float" 
+    target="_blank" 
+    aria-label="WhatsApp">
+    <img src="/media_static/whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
+    </a>
+
+  </main>
+    <div id="status-div" class="oculto status-div">
+      <h3 id="status-title"></h3>
+      <p id="status-msg"></p>
+    </div>
+      <div id="btn-contacto-tienda" class="btn-contacto-tienda oculto">
+      <button onclick="window.open('https://wa.me/5491150168920?text=Hola! Quiero agregar un producto que no encuentro en la tienda', '_blank')">
+        ¿No encontrás un producto? <b>Contactanos y te lo agregamos!</b>
+      </button>
+    </div>
+
+
+
+
+  <footer>
+    <p>&copy; 2026 Plutarco Delivery</p>
+  </footer>
+
+  <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBVozj7g2eddN7aXyE8VeAaNKdPMtYdsQ4&libraries=places&callback=initAutocomplete" async defer></script>
+  <script src="/tienda/static/minorista/script.js?v=1.0.1"></script>
+</body>
+</html>
+

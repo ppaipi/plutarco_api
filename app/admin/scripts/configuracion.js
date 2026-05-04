@@ -1,14 +1,19 @@
 const buttonSaveAllConfig = document.getElementById("btn-save-all-config");
 const inputMinOrderAmount = document.getElementById("config-min-order-amount");
-const inputCategoryOrder = document.getElementById("config-category-order");
-const inputSubcategoryOrder = document.getElementById("config-subcategory-order");
 const inputCategoryInput = document.getElementById("config-category-input");
+const inputCategoryEmoji = document.getElementById("config-category-emoji");
+const inputCategoryColor = document.getElementById("config-category-color");
 const inputSubcategoryInput = document.getElementById("config-subcategory-input");
+const inputSubcategoryEmoji = document.getElementById("config-subcategory-emoji");
+const inputSubcategoryColor = document.getElementById("config-subcategory-color");
+const tariffsTable = document.getElementById('tariffs-table');
 const btnAddCategory = document.getElementById("btn-add-category");
 const btnAddSubcategory = document.getElementById("btn-add-subcategory");
 const inputStoreStatus = document.getElementById("config-store-status");
 const msgStoreStatus = document.getElementById("store-status-msg");
-const tariffsTable = document.getElementById('tariffs-table');
+const inputAnuncioHabilitado = document.getElementById("anuncio-store-status");
+const imgAnuncio = document.getElementById("anuncio-img");
+const btnAnuncioUpload = document.getElementById("anuncio-button");
 const btnAddTariff = document.getElementById('btn-add-tariff');
 const daysListEl = document.getElementById('days-list');
 
@@ -23,7 +28,7 @@ let api_key = TOKEN;
 function showMsg(el, text, ok = true) {
   if (!el) return;
   el.textContent = text;
-  el.style.color = ok ? "green" : "red";
+  el.className = `msg ${ok ? 'success' : 'error'}`;
 }
 
 function createTariffRow(t = {km: '', price: ''}){
@@ -98,19 +103,20 @@ async function fetchConfig() {
     inputStoreStatus.checked = config.status !== false;
     msgStoreStatus.value = config.mensage_status || '';
 
+    // anuncio
+    inputAnuncioHabilitado.checked = config.anuncio_habilitado || false;
+    if (config.anuncio_imagen_url) {
+      imgAnuncio.src =config.anuncio_imagen_url;
+      imgAnuncio.style.display = 'block';
+    } else {
+      imgAnuncio.style.display = 'none';
+    }
+
     //empleados
     initEmpleados(config || {});
 
-    // categorias / subcategorias
-    // set order inputs as comma separated values
-    inputCategoryOrder.value = (config.orden_categorias || []).join(',');
-    inputSubcategoryOrder.value = (config.orden_subcategorias || []).join(',');
-    
-    // render interactive tag lists (reorderable)
-    renderTagListsFromConfig();
-
-    // fill datalists
-    fetchCategoriesLists();
+    // categorias / subcategorias - Nueva estructura con emoji y color
+    renderTagListsFromConfig(config);
   } catch (err) {
     console.error("Error cargando config:", err);
     showMsg(msgConfig, "⚠️ No se pudo cargar: " + err.message, false);
@@ -215,18 +221,34 @@ async function saveConfig() {
   const storeStatus = inputStoreStatus.checked;
   const storeMsg = msgStoreStatus.value || "";
 
+  // build categorías/subcategorías con emoji y color desde las tablas
+  const categorias = [];
+  document.querySelectorAll('#category-table tbody tr').forEach(row => {
+    const name = row.querySelector('.name-cell').textContent;
+    const emoji = row.querySelector('.emoji-cell').textContent === '—' ? '' : row.querySelector('.emoji-cell').textContent;
+    const color = rgbToHex(row.querySelector('.color-preview').style.backgroundColor) || '#3b82f6';
+    if (name) categorias.push({ name, emoji, color });
+  });
+
+  const subcategorias = [];
+  document.querySelectorAll('#subcategory-table tbody tr').forEach(row => {
+    const name = row.querySelector('.name-cell').textContent;
+    const emoji = row.querySelector('.emoji-cell').textContent === '—' ? '' : row.querySelector('.emoji-cell').textContent;
+    const color = rgbToHex(row.querySelector('.color-preview').style.backgroundColor) || '#3b82f6';
+    if (name) subcategorias.push({ name, emoji, color });
+  });
 
   // build payload
-
   const payload = {
     envio_tarifas: tarifas,
     dias_entrega: dias,
-    orden_categorias: inputCategoryOrder.value.split(',').map(s=>s.trim()).filter(s=>s),
-    orden_subcategorias: inputSubcategoryOrder.value.split(',').map(s=>s.trim()).filter(s=>s),
+    orden_categorias: categorias,
+    orden_subcategorias: subcategorias,
     pedido_minimo: parseFloat(inputMinOrderAmount.value) || 0,
     status: storeStatus,
     mensage_status: storeMsg,
-    empleados: empleados
+    empleados: empleados,
+    anuncio_habilitado: inputAnuncioHabilitado.checked
   };
 
   try{
@@ -246,22 +268,70 @@ async function saveConfig() {
 buttonSaveAllConfig.addEventListener("click", saveConfig);
 
 document.addEventListener("DOMContentLoaded", () => {
-  // add tariff button
-  if(btnAddTariff){
+  // anuncio upload button
+  if(btnAnuncioUpload){
+    btnAnuncioUpload.addEventListener('click', async () => {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = 'image/*';
+      input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const formData = new FormData();
+        formData.append('file', file);
+        try {
+          const headers = {};
+          if (api_key) headers['Authorization'] = `Bearer ${api_key}`;
+          const res = await fetch(API_URL + 'config/anuncio/upload', {
+            method: 'POST',
+            headers,
+            body: formData
+          });
+          if (res.ok) {
+            const data = await res.json();
+            imgAnuncio.src = API_URL + data.url;
+            imgAnuncio.style.display = 'block';
+            showMsg(msgConfig, "Imagen del anuncio subida correctamente", true);
+          } else {
+            showMsg(msgConfig, "Error subiendo imagen", false);
+          }
+        } catch (err) {
+          showMsg(msgConfig, "Error: " + err.message, false);
+        }
+      };
+      input.click();
+    });
+  }
     btnAddTariff.addEventListener('click', ()=>{
       const tbody = tariffsTable.querySelector('tbody');
       tbody.appendChild(createTariffRow());
     });
-  }
+  
   
   // category and subcategory add buttons
   if(btnAddCategory) btnAddCategory.addEventListener('click', ()=>{
-    const v = (inputCategoryInput.value || '').trim();
-    if(v) { addTagToList('category', v); inputCategoryInput.value = ''; inputCategoryInput.focus(); }
+    const name = (inputCategoryInput.value || '').trim();
+    const emoji = (inputCategoryEmoji.value || '').trim();
+    const color = inputCategoryColor.value || '#0b76ff';
+    if(name) { 
+      addTagToList('category', {name, emoji, color}); 
+      inputCategoryInput.value = ''; 
+      inputCategoryEmoji.value = '';
+      inputCategoryColor.value = '#0b76ff';
+      inputCategoryInput.focus(); 
+    }
   });
   if(btnAddSubcategory) btnAddSubcategory.addEventListener('click', ()=>{
-    const v = (inputSubcategoryInput.value || '').trim();
-    if(v) { addTagToList('subcategory', v); inputSubcategoryInput.value = ''; inputSubcategoryInput.focus(); }
+    const name = (inputSubcategoryInput.value || '').trim();
+    const emoji = (inputSubcategoryEmoji.value || '').trim();
+    const color = inputSubcategoryColor.value || '#0b76ff';
+    if(name) { 
+      addTagToList('subcategory', {name, emoji, color}); 
+      inputSubcategoryInput.value = ''; 
+      inputSubcategoryEmoji.value = '';
+      inputSubcategoryColor.value = '#0b76ff';
+      inputSubcategoryInput.focus(); 
+    }
   });
   
   // Enter key on inputs
@@ -276,101 +346,164 @@ document.addEventListener("DOMContentLoaded", () => {
   fetchConfig();
 });
 
-
-function renderTagListsFromConfig(){
-  // Clear existing
-  const catContainer = document.getElementById('category-tags');
-  const subContainer = document.getElementById('subcategory-tags');
-  if(catContainer) catContainer.innerHTML = '';
-  if(subContainer) subContainer.innerHTML = '';
-
-  const catVals = (inputCategoryOrder.value || '').split(',').map(s=>s.trim()).filter(s=>s);
-  const subVals = (inputSubcategoryOrder.value || '').split(',').map(s=>s.trim()).filter(s=>s);
-
-  catVals.forEach(v=> addTagToList('category', v, false));
-  subVals.forEach(v=> addTagToList('subcategory', v, false));
-}
-
-function addTagToList(kind, value, syncInput=true){
-  const id = kind === 'category' ? 'category-tags' : 'subcategory-tags';
-  const container = document.getElementById(id);
-  if(!container) return;
+function showEditModal(kind, row) {
+  const name = row.querySelector('.name-cell').textContent;
+  const emoji = row.querySelector('.emoji-cell').textContent === '—' ? '' : row.querySelector('.emoji-cell').textContent;
+  const color = row.querySelector('.color-preview').style.backgroundColor || '#3b82f6';
   
-  // prevent duplicates
-  const existing = Array.from(container.querySelectorAll('.tag')).map(t=>t.dataset.value);
-  if(existing.includes(value)) return;
-
-  const tag = document.createElement('div');
-  tag.className = 'tag';
-  tag.draggable = true;
-  tag.dataset.value = value;
-  tag.innerHTML = `<span class="tag-label">${value}</span>
-    <div class="tag-actions">
-      <button class="tag-btn btn-move-up" title="Subir">▲</button>
-      <button class="tag-btn btn-move-down" title="Bajar">▼</button>
-      <button class="tag-btn btn-delete" title="Eliminar">✖</button>
-    </div>`;
-
-  // drag handlers
-  tag.addEventListener('dragstart', (e)=>{ 
-    e.dataTransfer.setData('text/plain', value); 
-    tag.classList.add('dragging'); 
-    e.dataTransfer.effectAllowed = 'move'; 
-  });
-  tag.addEventListener('dragend', ()=>{ tag.classList.remove('dragging'); });
-
-  // drop on another tag
-  tag.addEventListener('dragover', (e)=>{ e.preventDefault(); e.dataTransfer.dropEffect = 'move'; });
-  tag.addEventListener('drop', (e)=>{
-    e.preventDefault();
-    const draggedValue = e.dataTransfer.getData('text/plain');
-    if(!draggedValue) return;
-    const draggedEl = Array.from(container.querySelectorAll('.tag')).find(t=>t.dataset.value === draggedValue);
-    if(!draggedEl || draggedEl === tag) return;
-    container.insertBefore(draggedEl, tag);
-    syncInputFromTags(kind);
-  });
-
-  // action buttons
-  tag.querySelector('.btn-delete').addEventListener('click', (e)=>{ 
-    e.preventDefault();
-    tag.remove(); 
-    syncInputFromTags(kind); 
-  });
-  tag.querySelector('.btn-move-up').addEventListener('click', (e)=>{ 
-    e.preventDefault();
-    const prev = tag.previousElementSibling; 
-    if(prev) container.insertBefore(tag, prev); 
-    syncInputFromTags(kind); 
-  });
-  tag.querySelector('.btn-move-down').addEventListener('click', (e)=>{ 
-    e.preventDefault();
-    const next = tag.nextElementSibling; 
-    if(next) container.insertBefore(next, tag); 
-    syncInputFromTags(kind); 
-  });
-
-  // allow dropping at end (empty space)
-  container.addEventListener('dragover', (e)=>{ e.preventDefault(); });
-  container.addEventListener('drop', (e)=>{
-    e.preventDefault();
-    const draggedValue = e.dataTransfer.getData('text/plain');
-    if(!draggedValue) return;
-    const draggedEl = Array.from(container.querySelectorAll('.tag')).find(t=>t.dataset.value === draggedValue);
-    if(!draggedEl) return;
-    container.appendChild(draggedEl);
-    syncInputFromTags(kind);
-  });
-
-  container.appendChild(tag);
-  if(syncInput) syncInputFromTags(kind);
+  const newEmoji = prompt(`Editar emoji para "${name}":\n(Deja vacío si no deseas emoji)`, emoji);
+  if (newEmoji === null) return; // Cancelado
+  
+  const newColor = prompt(`Editar color para "${name}":\n(Formato: #RRGGBB, ej: #FF0000)`, rgbToHex(color));
+  if (newColor === null) return; // Cancelado
+  
+  // Validar color
+  if (!/^#[0-9A-Fa-f]{6}$/.test(newColor)) {
+    alert('Color inválido. Use formato #RRGGBB');
+    return;
+  }
+  
+  row.querySelector('.emoji-cell').textContent = newEmoji || '—';
+  row.querySelector('.color-preview').style.backgroundColor = newColor;
+  row.querySelector('.color-preview').title = newColor;
 }
 
-function syncInputFromTags(kind){
-  const id = kind === 'category' ? 'category-tags' : 'subcategory-tags';
-  const container = document.getElementById(id);
-  if(!container) return;
-  const values = Array.from(container.querySelectorAll('.tag')).map(t=>t.dataset.value);
-  if(kind === 'category') inputCategoryOrder.value = values.join(',');
-  else inputSubcategoryOrder.value = values.join(',');
+function rgbToHex(rgb) {
+  if (rgb.startsWith('#')) return rgb;
+  const match = rgb.match(/^rgb\((\d+),\s*(\d+),\s*(\d+)\)$/);
+  if (!match) return '#3b82f6';
+  const r = parseInt(match[1]);
+  const g = parseInt(match[2]);
+  const b = parseInt(match[3]);
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
+
+function renderTagListsFromConfig(config){
+  // Clear existing tables
+  const catTable = document.getElementById('category-table').querySelector('tbody');
+  const subTable = document.getElementById('subcategory-table').querySelector('tbody');
+  catTable.innerHTML = '';
+  subTable.innerHTML = '';
+
+  const categorias = (config && config.orden_categorias) || [];
+  const subcategorias = (config && config.orden_subcategorias) || [];
+
+  categorias.forEach((cat, index) => {
+    if (typeof cat === 'string') {
+      // Migración: si aún es string, convertir a objeto
+      addTableRow('category', {name: cat, emoji: '', color: '#3b82f6'}, false);
+    } else {
+      addTableRow('category', cat, false);
+    }
+  });
+  
+  subcategorias.forEach((subcat, index) => {
+    if (typeof subcat === 'string') {
+      // Migración: si aún es string, convertir a objeto
+      addTableRow('subcategory', {name: subcat, emoji: '', color: '#3b82f6'}, false);
+    } else {
+      addTableRow('subcategory', subcat, false);
+    }
+  });
+}
+
+function addTableRow(kind, itemData, syncInput=true){
+  const tableId = kind === 'category' ? 'category-table' : 'subcategory-table';
+  const table = document.getElementById(tableId);
+  const tbody = table.querySelector('tbody');
+  
+  // Normalizar data: puede ser string (antiguo) u objeto (nuevo)
+  let name, emoji, color;
+  if (typeof itemData === 'string') {
+    name = itemData;
+    emoji = '';
+    color = '#3b82f6';
+  } else {
+    name = itemData.name;
+    emoji = itemData.emoji || '';
+    color = itemData.color || '#3b82f6';
+  }
+
+  // prevent duplicates
+  const existingRows = Array.from(tbody.querySelectorAll('tr')).map(row => 
+    row.querySelector('.name-cell').textContent
+  );
+  if(existingRows.includes(name)) return;
+
+  const rowIndex = tbody.children.length + 1;
+  
+  const row = document.createElement('tr');
+  row.innerHTML = `
+    <td class="order-number">${rowIndex}</td>
+    <td class="emoji-cell">${emoji || '—'}</td>
+    <td class="name-cell">${name}</td>
+    <td class="color-cell">
+      <div class="color-preview" style="background-color: ${color}" title="${color}"></div>
+    </td>
+    <td class="actions-cell">
+      <button class="action-btn edit-btn" title="Editar">✎</button>
+      <button class="action-btn move-btn" title="Subir">▲</button>
+      <button class="action-btn move-btn" title="Bajar">▼</button>
+      <button class="action-btn delete-btn" title="Eliminar">🗑️</button>
+    </td>
+  `;
+
+  // Edit button
+  row.querySelector('.edit-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    showEditModal(kind, row);
+  });
+
+  // Move up button
+  row.querySelectorAll('.move-btn')[0].addEventListener('click', (e) => {
+    e.preventDefault();
+    const prevRow = row.previousElementSibling;
+    if (prevRow) {
+      tbody.insertBefore(row, prevRow);
+      updateOrderNumbers(tbody);
+      syncInputFromTable(kind);
+    }
+  });
+
+  // Move down button
+  row.querySelectorAll('.move-btn')[1].addEventListener('click', (e) => {
+    e.preventDefault();
+    const nextRow = row.nextElementSibling;
+    if (nextRow) {
+      tbody.insertBefore(nextRow, row);
+      updateOrderNumbers(tbody);
+      syncInputFromTable(kind);
+    }
+  });
+
+  // Delete button
+  row.querySelector('.delete-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    row.remove();
+    updateOrderNumbers(tbody);
+    syncInputFromTable(kind);
+  });
+
+  // Color preview click to edit
+  row.querySelector('.color-preview').addEventListener('click', (e) => {
+    e.preventDefault();
+    showEditModal(kind, row);
+  });
+
+  tbody.appendChild(row);
+  updateOrderNumbers(tbody);
+  
+  if(syncInput) syncInputFromTable(kind);
+}
+
+function updateOrderNumbers(tbody) {
+  const rows = tbody.querySelectorAll('tr');
+  rows.forEach((row, index) => {
+    row.querySelector('.order-number').textContent = index + 1;
+  });
+}
+
+function syncInputFromTable(kind){
+  // No necesitamos sincronizar con un input hidden, ya que se guarda directamente en saveConfig
 }

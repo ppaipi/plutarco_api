@@ -4,164 +4,288 @@
   <meta charset="UTF-8">
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>🌵 Plutarco Almacén Delivery 🥖 | Panadería y almacén</title>
   <link rel="icon" type="image/jpeg" href="/media_static/icon.ico">
-
-
   <meta name="description" content="Plutarco Almacen Delivery: Panadería y comidas saludables, delivery CABA. Pedí pan integral, comidas organicas y productos de almacén con envío. ¡Hace tu pedido online!">
-
-  <meta name="keywords" content="Plutarco Almacen delivery, panadería coghlan, delivery comidas CABA, pan integral, saludable , comidas listas, almacén online, organico">
-
+  <meta name="keywords" content="Plutarco Almacen delivery, panadería coghlan, delivery comidas CABA, pan integral, saludable, comidas listas, almacén online, organico">
   <meta name="author" content="Plutarco Almacén">
-
   <meta property="og:title" content="Plutarco Almacen Delivery | Panadería y comidas en Coghlan">
   <meta property="og:description" content="Pedí online pan integral, comidas saludables y productos de almacén. Delivery en Coghlan, CABA.">
-  <meta property="og:image" content="https://plutarcoalmacen.com.ar/media_static/icon.ico"> <!-- URL completa de la imagen -->
+  <meta property="og:image" content="https://plutarcoalmacen.com.ar/media_static/icon.ico">
   <meta property="og:url" content="https://plutarcoalmacen.com.ar">
   <meta property="og:type" content="website">
-
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Plutarco Almacen Delivery | Panadería y Almacen">
   <meta name="twitter:description" content="Pedí online pan integral, comidas saludables y productos de almacén. Delivery en Coghlan, CABA.">
   <meta name="twitter:image" content="https://plutarcoalmacen.com.ar/media_static/icon.ico">
-
-
-  <meta name="geo.position" content="-34.5618;-58.4753"> <!-- Latitud y longitud aproximadas -->
+  <meta name="geo.position" content="-34.5618;-58.4753">
   <meta name="geo.placename" content="Plutarco Delivery, Coghlan, CABA, Argentina">
   <meta name="geo.region" content="AR-C">
-
   <link rel="canonical" href="https://plutarcoalmacen.com.ar">
-
-  <link rel="stylesheet" href="/tienda/static/styles.css?v=1">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/tienda/static/styles.css?v=2">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Permanent+Marker&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
-
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 
 <body>
-  
+
+  <!-- =====================================================
+       HEADER — logo + búsqueda + carrito en una sola fila
+  ====================================================== -->
   <header>
-    <div id="click_header">
-      <div class="logo-titulo">
-      <img src="/media_static/iconpng.ico" alt="Logo">
-      <h1>Plutarco Almacen Delivery  
-      <span>Panadería integral y Almacén Organico</span>  </h1>
-    </div>
-    </div>    <div id="cart-icon-fixed">
-      <button onclick="toggleCart()" id="cart-icon">🛒 <span id="cart-count">0</span></button>
-    </div>
-    <nav id="category-buttons">
-      <div class="dropdown">
-        <button class="dropdown-btn">
-          Categorías <span class="arrow">▼</span>
-        </button>
-        <div class="dropdown-content" id="dropdown-categories"></div>
+  <div class="header-inner">
+    <div class="header-logo" id="click_header">
+      <img src="/media_static/iconpng.ico" alt="Logo Plutarco">
+      <div class="header-logo-text">
+        <strong>Plutarco Almacén</strong>
+        <span>Coghlan · CABA</span>
       </div>
-      <a href="https://www.plutarcoalmacen.com.ar/sobre-nosotros.html">
-      <button  class="nav-btn">Sobre nosotros</button></a>
-    <button class="nav-btn" onclick="window.open('https://wa.me/5491150168920?text=Hola! Vengo de la pagina web', '_blank')">Contacto</button>
-    </nav>
-
-
-    <div class="search-cart-wrapper">
-      <div class="search-bar">
-        <input type="text" id="search-input" placeholder="Buscar producto..."
+    </div>
+    <div class="header-search">
+      <span class="header-search-icon">🔍</span>
+      <input type="text" id="search-input"
+        placeholder="Buscar producto..."
         onkeydown="if(event.key==='Enter') searchProduct();"
         oninput="searchProduct()">
-         <button onclick="searchProduct()">🔍 Buscar</button>
-      </div>
     </div>
-    </div>
-  </header>
+    <button class="header-cart-btn" id="cart-icon" onclick="toggleCart()">
+      🛒 <span id="cart-count">0</span>
+    </button>
+  </div>
 
+  <nav id="category-buttons">
+    <div class="dropdown">
+      <button class="dropdown-btn">
+        ☰ Categorias <span class="arrow">▼</span>
+      </button>
+      <div class="dropdown-content" id="dropdown-categories"></div>
+    </div>
+    <div id="quick-cat-pills" class="quick-cat-pills"></div>
+    <a href="https://www.plutarcoalmacen.com.ar/sobre-nosotros" class="nav-link-btn">Nosotros</a>
+    <button class="nav-link-btn" onclick="window.open('https://wa.me/5491150168920?text=Hola! Vengo de la pagina web', '_blank')">Contacto</button>
+  </nav>
+</header>
+
+  <!-- Banner oferta -->
   <div class="banner-envio" id="banner-envio">
-  <span>⚡ <b>OFERTA LANZAMIENTO!</b> Ahora tenemos <strong>envíos gratis</strong> durante ESTE MES!   🚚 (mínimo $20.000)</span>
-  <button class="cerrar-banner" onclick="document.getElementById('banner-envio').style.display='none'">✖</button>
-</div>
-
+    <span>⚡ <b>OFERTA!!</b> Ahora tenemos <strong>envíos gratis</strong> durante ESTE MES! 🚚 (mínimo $30.000)</span>
+    <button class="cerrar-banner" onclick="document.getElementById('banner-envio').style.display='none'">✕</button>
+  </div>
 
   <main>
+
+    <!-- HERO -->
+    <section class="hero-section">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <p class="hero-tag">🌿 Coghlan · del barrio a tu casa</p>
+        <h2 class="hero-titulo">Panadería artesanal, orgánicos<br>y almacén natural</h2>
+        <p class="hero-sub">
+          Horneamos con harinas integrales orgánicas, sin aditivos ni conservantes.<br>
+          Trabajamos cada dia en fomentar una alimentación más saludable, natural y consciente. <br>
+          Delivery a domicilio en CABA y AMBA. (consultar cobertura)
+        </p>
+        <button class="hero-cta" onclick="document.getElementById('product-list').scrollIntoView({behavior:'smooth'})">
+          Ver productos ↓
+        </button>
+      </div>
+    </section>
+
+    <!-- STRIP INFO -->
+    <section class="strip-info">
+      <div class="strip-item">
+        <span class="strip-icon">🚚</span>
+        <div>
+          <strong>Envíos a domicilio</strong>
+          <span>CABA y GBA · desde $20.000</span>
+        </div>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-icon">📅</span>
+        <div>
+          <strong>Días de entrega</strong>
+          <span>Lunes, Miércoles y Viernes</span>
+        </div>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-icon">💳</span>
+        <div>
+          <strong>Pago por transferencia</strong>
+          <span>100% seguro</span>
+        </div>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-icon">🌾</span>
+        <div>
+          <strong>Sin aditivos</strong>
+          <span>Harinas integrales orgánicas</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- CATEGORÍAS VISUALES -->
+    <section class="categorias-visuales" id="categorias-visuales">
+      <h2 class="seccion-titulo">¿Qué estás buscando?</h2>
+      <div id="categoria-cards" class="categoria-cards-grid"></div>
+    </section>
+
+    <!-- LISTA DE PRODUCTOS -->
     <div id="product-list"></div>
 
-    <section id="cart" class="cart-panel">
-      <button class="close-cart" onclick="toggleCart()">❌</button>
-      <h2>🛒 Carrito de Compras</h2>
-      <ul id="cart-items"></ul>
+    <!-- =====================================================
+         PANEL CARRITO — rediseñado
+    ====================================================== -->
+    <section id="cart">
 
-      <!-- pickup-day ahora igual de estético que los otros inputs -->
-      <div class="inputs">
-        <label for="pickup-day">📅 Día de entrega:</label>
-        <select id="pickup-day" required>
-          <option value="" disabled selected>Seleccionar una fecha</option>
-        </select>
+      <!-- Header del carrito -->
+      <div class="cart-header">
+        <div class="cart-header-title">
+          🛒 Tu pedido
+        </div>
+        <button class="close-cart" onclick="toggleCart()">✕</button>
       </div>
 
-      <div class="inputs">
-        <label for="name">👤 Nombre completo:</label>
-        <input type="text" id="name" placeholder="Tu nombre completo">
-      </div>
+      <!-- Items -->
+      <div class="cart-body">
+        <ul id="cart-items"></ul>
 
-      <div class="inputs">
-        <label for="email">📧 Correo electrónico:</label>
-        <input type="email" id="email" placeholder="tuemail@ejemplo.com">
-      </div>
+        <!-- Subtotal parcial (se actualiza desde JS) -->
+        <div id="cart-summary" class="cart-summary-inline"></div>
 
-      <div class="inputs">
-        <label for="phone">☎️ Número de teléfono:</label>
-        <input type="tel" id="phone" placeholder="Ej: 11 1234-5678">
-      </div>
+        <!-- Separador -->
+        <div class="cart-section-title">Datos de entrega</div>
 
-      <div class="inputs">
-        <label for="address">📍 Dirección de entrega:</label>
-        <input type="text" id="address" placeholder="Dirección completa">
-      </div>
+        <div class="inputs">
+          <label for="pickup-day">📅 Día de entrega</label>
+          <select id="pickup-day" required>
+            <option value="" disabled selected>Seleccionar una fecha</option>
+          </select>
+        </div>
 
-      <div class="inputs">
-        <label for="comment">💬 Comentario (DEPTO O CASA):</label>
-        <input type="text" id="comment" placeholder="Depto 2B">
-      </div>
+        <div class="inputs-grid">
+          <div class="inputs">
+            <label for="name">👤 Nombre completo</label>
+            <input type="text" id="name" placeholder="Tu nombre completo">
+          </div>
+          <div class="inputs">
+            <label for="phone">☎️ Teléfono</label>
+            <input type="tel" id="phone" placeholder="11 1234-5678">
+          </div>
+        </div>
 
-      <h4>Método de pago: SOLO TRANSFERENCIA</h4>
-      <div class="botonStock" >
-        <p>⚠️ En caso de no contar con stock de algún producto, se te notificará y se realizará la devolución del monto correspondiente.</p>
+        <div class="inputs">
+          <label for="email">📧 Correo electrónico</label>
+          <input type="email" id="email" placeholder="tuemail@ejemplo.com">
+        </div>
+
+        <div class="inputs">
+          <label for="address">📍 Dirección de entrega</label>
+          <input type="text" id="address" placeholder="Escribí tu dirección completa...">
+        </div>
+
+        <div class="inputs">
+          <label for="comment">🏠 Depto / Piso / Aclaración</label>
+          <input type="text" id="comment" placeholder="Ej: Depto 2B, timbre García">
+        </div>
+
+        <!-- Mensaje envío calculado -->
+        <p id="envio-msg" class="envio-msg"></p>
+
+        <!-- Aviso pago y stock -->
+        <div class="cart-aviso">
+          <div class="cart-aviso-pago">
+            💳 <strong>Solo transferencia bancaria.</strong> Te enviamos los datos al confirmar.
+          </div>
+          <div class="cart-aviso-stock">
+            ⚠️ Si algún producto no tiene stock, te avisamos y hacemos la devolución del monto correspondiente.
+          </div>
+        </div>
+
+        <!-- Totales -->
+        <div class="cart-totales">
+          <div class="cart-total-row">
+            <span>Subtotal</span>
+            <span id="subtotal-display">$0</span>
+          </div>
+          <div class="cart-total-row">
+            <span>Envío</span>
+            <span id="envio-display">—</span>
+          </div>
+          <div class="cart-total-row cart-total-main">
+            <span>Total</span>
+            <span>$<span id="total">0</span></span>
+          </div>
+        </div>
+
+        <!-- Botón principal -->
+        <button class="finalize-btn" id="submit-btn" onclick="enviarPedido()">
+          Confirmar pedido →
+        </button>
+
+        <!-- Alternativa WhatsApp -->
+        <button class="wsp-alt-btn" id="btn-consultar-wpp" onclick="consultarWhatsApp()" target="_blank">
+          💬 Consultar por WhatsApp
+        </button>
+
       </div>
-      <p id="envio-msg"></p>
-      <p class="total">Total: $<span id="total">0</span></p>
-      <button class="finalize-btn" id="submit-btn" onclick="enviarPedido()">Finalizar Pedido</button>
     </section>
-    <!-- Botón flotante redondo de WhatsApp -->
-    <a href="https://wa.me/5491150168920?text=Hola! Vengo de la pagina web" 
-    class="whatsapp-float" 
-    target="_blank" 
-    aria-label="WhatsApp">
-    <img src="/media_static/whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
+
+    <!-- WhatsApp flotante -->
+    <a href="https://wa.me/5491150168920?text=Hola! Vengo de la pagina web"
+       class="whatsapp-float"
+       target="_blank"
+       aria-label="WhatsApp"
+       id="boton-wpp">
+      <img src="/media_static/whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
     </a>
 
   </main>
-    <div id="status-div" class="oculto status-div">
-      <h3 id="status-title"></h3>
-      <p id="status-msg"></p>
+
+  <!-- Estado tienda (pausada) -->
+  <div id="status-div" class="oculto status-div">
+    <h3 id="status-title"></h3>
+    <p id="status-msg"></p>
+  </div>
+
+  <!-- Botón contacto si no encuentra producto -->
+  <div id="btn-contacto-tienda" class="btn-contacto-tienda oculto">
+    <button onclick="window.open('https://wa.me/5491150168920?text=Hola! Quiero agregar un producto que no encuentro en la tienda', '_blank')">
+      ¿No encontrás un producto? <b>Contactanos y te lo agregamos!</b>
+    </button>
+  </div>
+
+  <!-- Quiénes somos -->
+  <section class="quienes-somos">
+    <div class="qs-inner">
+      <div class="qs-text">
+        <h2>Hola, somos Plutarco 🌿</h2>
+        <p>
+          Somos un almacén de barrio en Coghlan con una panadería integral artesanal.
+          Hacemos el pan nosotros mismos, con harinas orgánicas, sin harinas blancas,
+          sin aditivos ni conservantes.
+          Somos un equipo pequeño, apasionado por la comida saludable y el buen pan, 
+          y nos encanta llevar nuestros productos a tu casa.
+          Tenemos la mejor seleccion de productos de almacén natural, orgánicos y dietéticos, 
+          para que puedas armar tu pedido completo desde un mismo lugar.
+
+          Estamos para ayudarte, no dudes en contactarnos.
+        </p>
+        <a href="/sobre-nosotros" class="qs-btn">Conocernos más →</a>
+      </div>
+      <div class="qs-icon">🌾</div>
     </div>
-      <div id="btn-contacto-tienda" class="btn-contacto-tienda oculto">
-      <button onclick="window.open('https://wa.me/5491150168920?text=Hola! Quiero agregar un producto que no encuentro en la tienda', '_blank')">
-        ¿No encontrás un producto? <b>Contactanos y te lo agregamos!</b>
-      </button>
-    </div>
-
-
-
+  </section>
 
   <footer>
-    <p>&copy; 2026 Plutarco Delivery</p>
+    <p>© 2026 Plutarco Almacén · Coghlan, Buenos Aires</p>
   </footer>
 
   <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBVozj7g2eddN7aXyE8VeAaNKdPMtYdsQ4&libraries=places&callback=initAutocomplete" async defer></script>
-  <script src="/tienda/static/minorista/script.js?v=1.0.1"></script>
+  <script src="/tienda/static/minorista/script.js?v=1.0.2"></script>
 </body>
 </html>
-

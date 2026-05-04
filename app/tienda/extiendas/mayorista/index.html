@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>🌵 Plutarco Panadería 🥖</title>
+  <link rel="icon" type="image/jpeg" href="/media_static/icon.ico">
+
+
+  <meta name="description" content="Plutarco Panadería">
+
+  <meta name="keywords" content="Plutarco Panadería">
+
+  <meta name="author" content="Plutarco Almacén">
+
+  <meta property="og:title" content="Plutarco Panadería">
+  <meta property="og:description" content="Plutarco Panadería">
+  <meta property="og:image" content="https://plutarcoalmacen.com.ar/media_static/icon.ico"> <!-- URL completa de la imagen -->
+  <meta property="og:url" content="https://plutarcoalmacen.com.ar">
+  <meta property="og:type" content="website">
+
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Plutarco Panadería">
+  <meta name="twitter:description" content="Plutarco Panadería">
+  <meta name="twitter:image" content="https://plutarcoalmacen.com.ar/media_static/icon.ico">
+
+
+  <meta name="geo.position" content="-34.5618;-58.4753"> <!-- Latitud y longitud aproximadas -->
+  <meta name="geo.placename" content="Plutarco Almacen, Coghlan, CABA, Argentina">
+  <meta name="geo.region" content="AR-C">
+
+
+  <link rel="stylesheet" href="/tienda/static/styles.css?">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Permanent+Marker&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
+
+</head>
+
+<body>
+  <header>
+    <div class="logo-titulo">
+    <img src="/media_static/iconpng.ico" alt="Logo">
+    <h1>Plutarco Panadería  
+    <span>Artesanal, Vegana y Deliciosa</span>  </h1>
+    </div>
+    <div id="cart-icon-fixed">
+      <button onclick="toggleCart()" id="cart-icon">🛒 <span id="cart-count">0</span></button>
+    </div>
+    <div class="search-cart-wrapper">
+      <div class="search-bar">
+        <input type="text" id="search-input" placeholder="Buscar producto..."
+        onkeydown="if(event.key==='Enter') searchProduct();"
+        oninput="searchProduct()">
+         <button onclick="searchProduct()">🔍 Buscar</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div id="product-list"></div>
+
+    <section id="cart" class="cart-panel">
+      <button class="close-cart" onclick="toggleCart()">❌</button>
+      <h2>🛒 Carrito de Compras</h2>
+      <ul id="cart-items"></ul>
+
+      <label for="name">👤 Nombre Del Local: (ESPECIFICAR SUCURSAL)</label>
+      <input type="text" id="name" placeholder="Nombre del Local">
+
+      <label for="email">📧 Correo electrónico:</label>
+      <input type="email" id="email" placeholder="tuemail@ejemplo.com">
+
+      <h4>🚚 Envio gratis CABA (mínimo $50.000)</h4>
+      <h4>🏠 Retiro por Local 10%dcto (sin mínimo)</h4>
+
+
+      <div class="botonStock" >
+        <p>⚠️ En caso de no contar con stock de algún producto, se te descontará del total pedido.</p>
+      </div>
+      <div class="envio-options">
+        <label>
+          <input type="checkbox" id="retiro-btn">
+          Retiro por Plutarco
+        </label>
+      </div>
+      <p class="total">Total: $<span id="total">0</span></p>
+      <p class="total oculto">Total con Descuento: $<span id="total-with-discount">0</span></p>
+
+      <button class="finalize-btn" id="submit-btn" onclick="enviarPedido()">Finalizar Pedido</button>
+    </section>
+    <!-- Botón flotante redondo de WhatsApp -->
+    <a href="https://wa.me/5491165603579?text=Hola!" 
+    class="whatsapp-float" 
+    target="_blank" 
+    aria-label="WhatsApp">
+    <img src="/media_static/whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
+    </a>
+
+  </main>
+
+  <footer>
+    <p>&copy; 2026 Plutarco Panadería</p>
+  </footer>
+
+  <script src="/tienda/static/mayorista/script.js"></script>
+</body>
+</html>

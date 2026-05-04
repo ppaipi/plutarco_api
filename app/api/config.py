@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, UploadFile, File
 from fastapi.responses import JSONResponse
 from app.database import get_session
 from sqlmodel import select
@@ -26,7 +26,9 @@ def get_envio_config():
             "pedido_minimo": config.pedido_minimo,
             "status": config.status,
             "mensage_status": config.mensage_status,
-            "empleados": config.empleados or {}
+            "empleados": config.empleados or {},
+            "anuncio_habilitado": config.anuncio_habilitado,
+            "anuncio_imagen_url": config.anuncio_imagen_url
         }
 @router.get("/empleados")
 def get_empleados():
@@ -43,7 +45,6 @@ def get_empleados():
     
 
 
-# PUT /config/envio - Actualiza configuración de envío (id=1)
 @router.put("/envio")
 async def update_envio_config(payload: dict):
     with get_session() as s:
@@ -60,11 +61,13 @@ async def update_envio_config(payload: dict):
                 pedido_minimo=payload.get("pedido_minimo", 0),
                 status=payload.get("status", True),
                 mensage_status=payload.get("mensage_status", ""),
-                empleados=payload.get("empleados", {})
+                empleados=payload.get("empleados", {}),
+                anuncio_habilitado=payload.get("anuncio_habilitado", False),
+                anuncio_imagen_url=payload.get("anuncio_imagen_url", None)
             )
         else:
             # Actualizar solo campos permitidos
-            allowed_keys = {"envio_tarifas", "dias_entrega", "orden_categorias", "orden_subcategorias", "pedido_minimo", "status", "mensage_status", "empleados"}
+            allowed_keys = {"envio_tarifas", "dias_entrega", "orden_categorias", "orden_subcategorias", "pedido_minimo", "status", "mensage_status", "empleados", "anuncio_habilitado", "anuncio_imagen_url"}
             for key, value in payload.items():
                 if key in allowed_keys:
                     setattr(config, key, value)
@@ -83,8 +86,86 @@ async def update_envio_config(payload: dict):
             "pedido_minimo": config.pedido_minimo,
             "status": config.status,
             "mensage_status": config.mensage_status,
-            "empleados": config.empleados or {}
+            "empleados": config.empleados or {},
+            "anuncio_habilitado": config.anuncio_habilitado,
+            "anuncio_imagen_url": config.anuncio_imagen_url
         }
+
+
+@router.post("/anuncio/upload")
+async def upload_anuncio_image(file: UploadFile = File(...)):
+    from app.config import IMAGES_DIR
+    import os
+    from PIL import Image
+    from io import BytesIO
+
+    # validate extension
+    name = file.filename or ''
+    ext = os.path.splitext(name)[1].lower()
+    if ext not in ('.jpg', '.jpeg', '.png', '.webp'):
+        raise HTTPException(status_code=400, detail="Formato de imagen no soportado")
+
+    # filename for anuncio
+    filename = f"anuncio{ext}"
+    path = os.path.join(IMAGES_DIR, filename)
+
+    try:
+        # optimize image similar to images.py
+        image = Image.open(file.file)
+        original_format = image.format.upper()
+
+        # Redimensionar sin deformar
+        image.thumbnail((1200, 800))  # maybe larger for anuncio
+
+        buffer = BytesIO()
+
+        # Detectar transparencia
+        has_alpha = (
+            image.mode in ("RGBA", "LA") or
+            (image.mode == "P" and "transparency" in image.info)
+        )
+
+        # ---- PNG ----
+        if original_format == "PNG":
+            if has_alpha:
+                image.save(buffer, format="PNG", optimize=True)
+            else:
+                image = image.convert("RGB")
+                image.save(buffer, format="JPEG", quality=85, optimize=True)
+
+        # ---- JPG / JPEG ----
+        elif original_format in ("JPG", "JPEG"):
+            image = image.convert("RGB")
+            image.save(buffer, format="JPEG", quality=85, optimize=True)
+
+        # ---- WEBP ----
+        elif original_format == "WEBP":
+            image.save(buffer, format="WEBP", quality=80, method=6)
+
+        else:
+            raise ValueError("Formato de imagen no soportado")
+
+        buffer.seek(0)
+        optimized_bytes = buffer.getvalue()
+
+        with open(path, "wb") as f:
+            f.write(optimized_bytes)
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error guardando archivo: {e}")
+
+    # update config
+    url = f"/images/{filename}"
+    with get_session() as s:
+        config = s.exec(select(Configuracion).where(Configuracion.id == 1)).first()
+        if not config:
+            config = Configuracion(id=1, anuncio_imagen_url=url)
+        else:
+            config.anuncio_imagen_url = url
+        s.add(config)
+        s.commit()
+
+    return {"filename": filename, "url": url}
 
 
 # GET /config/ - Lista todas las configuraciones

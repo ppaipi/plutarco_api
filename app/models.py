@@ -110,11 +110,13 @@ class Configuracion(SQLModel, table=True):
         sa_column=Column(SA_JSON),
     )
 
+    # Ej: [{ "name": "Carnes", "emoji": "🥩", "color": "#FF0000" }, ...]
     orden_categorias: Optional[list] = Field(
         default_factory=list,
         sa_column=Column(SA_JSON),
     )
 
+    # Ej: [{ "name": "Verduras", "emoji": "🥬", "color": "#00FF00" }, ...]
     orden_subcategorias: Optional[list] = Field(
         default_factory=list,
         sa_column=Column(SA_JSON),
@@ -132,3 +134,7 @@ class Configuracion(SQLModel, table=True):
         default_factory=dict,
         sa_column=Column(SA_JSON),
     )
+
+    # Anuncio
+    anuncio_habilitado: Optional[bool] = Field(default=False)
+    anuncio_imagen_url: Optional[str] = None

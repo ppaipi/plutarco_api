@@ -106,7 +106,7 @@ def catalogo_facebook():
             "in stock",                       # availability
             "new",                            # condition
             f"{p.precio:.2f} ARS",            # price
-            f"https://plutarcoalmacen.com.ar/",          # link
+            f"https://plutarcoalmacen.com.ar/producto/{p.id}",          # link
             f"https://plutarcoalmacen.com.ar{p.imagen_url}" if p.imagen_url else "",               # image
             "Plutarco"                             # brand
         ])
@@ -118,6 +118,61 @@ def catalogo_facebook():
         media_type="text/csv",
         headers={
             "Content-Disposition": "attachment; filename=catalogo_facebook.csv"
+        }
+    )
+@router.get("/catalogo_google")
+def catalogo_google():
+
+    with get_session() as s:
+        productos = s.exec(
+            select(Product)
+            .where(Product.habilitado == True)
+            .order_by(Product.orden.asc())
+        ).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output, delimiter='\t')  # Google recomienda TAB
+
+    # Encabezados EXACTOS de Google
+    writer.writerow([
+        "id",
+        "title",
+        "description",
+        "link",
+        "image_link",
+        "availability",
+        "price",
+        "condition",
+        "brand",
+        "mpn",
+        "google_product_category",
+        "product_type"
+    ])
+
+    for p in productos:
+
+        writer.writerow([
+            p.id,  # id
+            p.nombre,  # title
+            p.descripcion or "",
+            f"https://plutarcoalmacen.com.ar/producto/{p.id}",
+            f"https://plutarcoalmacen.com.ar{p.imagen_url}" if p.imagen_url else "",
+            "in_stock",  # ⚠️ formato correcto Google
+            f"{p.precio:.2f} ARS",
+            "new",
+            "Plutarco",
+            p.codigo or p.id,  # mpn (si no tenés GTIN)
+            "Food, Beverages & Tobacco > Food Items",  # ajustar según rubro
+            "Almacén > Productos"
+        ])
+
+    output.seek(0)
+
+    return StreamingResponse(
+        iter([output.getvalue()]),
+        media_type="text/tab-separated-values",
+        headers={
+            "Content-Disposition": "attachment; filename=catalogo_google.txt"
         }
     )
 

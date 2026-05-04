@@ -5,109 +5,167 @@
   <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <title>🌵 Plutarco Panadería 🥖</title>
+  <title>🌵 Plutarco Panadería | Mayorista 🥖</title>
   <link rel="icon" type="image/jpeg" href="/media_static/icon.ico">
 
-
-  <meta name="description" content="Plutarco Panadería">
-
-  <meta name="keywords" content="Plutarco Panadería">
-
+  <meta name="description" content="Plutarco Panadería - Venta Mayorista">
   <meta name="author" content="Plutarco Almacén">
 
-  <meta property="og:title" content="Plutarco Panadería">
-  <meta property="og:description" content="Plutarco Panadería">
-  <meta property="og:image" content="https://plutarcoalmacen.com.ar/media_static/icon.ico"> <!-- URL completa de la imagen -->
-  <meta property="og:url" content="https://plutarcoalmacen.com.ar">
-  <meta property="og:type" content="website">
-
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Plutarco Panadería">
-  <meta name="twitter:description" content="Plutarco Panadería">
-  <meta name="twitter:image" content="https://plutarcoalmacen.com.ar/media_static/icon.ico">
-
-
-  <meta name="geo.position" content="-34.5618;-58.4753"> <!-- Latitud y longitud aproximadas -->
-  <meta name="geo.placename" content="Plutarco Almacen, Coghlan, CABA, Argentina">
-  <meta name="geo.region" content="AR-C">
-
-
-  <link rel="stylesheet" href="/tienda/static/styles.css?">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Permanent+Marker&family=Quicksand:wght@300..700&display=swap" rel="stylesheet">
-
+  <!-- Estilos compartidos con la tienda minorista -->
+  <link rel="stylesheet" href="/tienda/static/styles.css?v=2">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 </head>
 
-<body>
+<body class="mayorista-page">
+
+  <!-- HEADER UNIFICADO -->
   <header>
-    <div class="logo-titulo">
-    <img src="/media_static/iconpng.ico" alt="Logo">
-    <h1>Plutarco Panadería  
-    <span>Artesanal, Vegana y Deliciosa</span>  </h1>
-    </div>
-    <div id="cart-icon-fixed">
-      <button onclick="toggleCart()" id="cart-icon">🛒 <span id="cart-count">0</span></button>
-    </div>
-    <div class="search-cart-wrapper">
-      <div class="search-bar">
-        <input type="text" id="search-input" placeholder="Buscar producto..."
-        onkeydown="if(event.key==='Enter') searchProduct();"
-        oninput="searchProduct()">
-         <button onclick="searchProduct()">🔍 Buscar</button>
+    <div class="header-inner">
+      <div class="header-logo">
+        <img src="/media_static/iconpng.ico" alt="Logo Plutarco">
+        <div class="header-logo-text">
+          <strong>Plutarco Panadería</strong>
+          <span>Venta Mayorista</span>
+        </div>
       </div>
+      
+      <div class="header-search">
+        <span class="header-search-icon">🔍</span>
+        <input type="text" id="search-input" 
+               placeholder="Buscar producto mayorista..."
+               onkeydown="if(event.key==='Enter') searchProduct();">
+      </div>
+
+      <button class="header-cart-btn" id="cart-icon" onclick="toggleCart()">
+        🛒 <span id="cart-count">0</span>
+      </button>
     </div>
   </header>
 
+  <!-- BANNER INFORMATIVO MAYORISTA -->
+  <div class="banner-envio" style="background-color: #2d5a27;">
+    <span>🏠 <b>RETIRO LOCAL:</b> 10% OFF</span>
+  </div>
+
   <main>
-    <div id="product-list"></div>
+    <!-- HERO SECCIÓN (Adaptado de minorista) -->
+    <section class="hero-section" style="min-height: 40vh;">
+      <div class="hero-overlay"></div>
+      <div class="hero-content">
+        <p class="hero-tag">🍞 Coghlan · del barrio a tu local</p>
+        <h2 class="hero-titulo">Abastecé tu local con<br>calidad artesanal</h2>
+        <p class="hero-sub">Horneamos con harinas integrales orgánicas, sin aditivos ni conservantes.</p>
+                <button class="hero-cta" onclick="document.getElementById('product-list').scrollIntoView({behavior:'smooth'})">
+          Ver productos ↓
+        </button>
 
-    <section id="cart" class="cart-panel">
-      <button class="close-cart" onclick="toggleCart()">❌</button>
-      <h2>🛒 Carrito de Compras</h2>
-      <ul id="cart-items"></ul>
-
-      <label for="name">👤 Nombre Del Local: (ESPECIFICAR SUCURSAL)</label>
-      <input type="text" id="name" placeholder="Nombre del Local">
-
-      <label for="email">📧 Correo electrónico:</label>
-      <input type="email" id="email" placeholder="tuemail@ejemplo.com">
-
-      <h4>🚚 Envio gratis CABA (mínimo $50.000)</h4>
-      <h4>🏠 Retiro por Local 10%dcto (sin mínimo)</h4>
-
-
-      <div class="botonStock" >
-        <p>⚠️ En caso de no contar con stock de algún producto, se te descontará del total pedido.</p>
       </div>
-      <div class="envio-options">
-        <label>
-          <input type="checkbox" id="retiro-btn">
-          Retiro por Plutarco
-        </label>
-      </div>
-      <p class="total">Total: $<span id="total">0</span></p>
-      <p class="total oculto">Total con Descuento: $<span id="total-with-discount">0</span></p>
-
-      <button class="finalize-btn" id="submit-btn" onclick="enviarPedido()">Finalizar Pedido</button>
     </section>
-    <!-- Botón flotante redondo de WhatsApp -->
-    <a href="https://wa.me/5491165603579?text=Hola!" 
-    class="whatsapp-float" 
-    target="_blank" 
-    aria-label="WhatsApp">
-    <img src="/media_static/whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
-    </a>
+        <section class="strip-info">
+      <div class="strip-item">
+        <span class="strip-icon">🚚</span>
+        <div>
+          <strong>Retiro por local y envios</strong>
+          <span>Retira por el local con descuento o recibi en tu local</span>
+        </div>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-icon">📅</span>
+        <div>
+          <strong>Días de Elaboración</strong>
+          <span>Lunes y Jueves</span>
+        </div>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-icon">💳</span>
+        <div>
+          <strong>Pago al recibir</strong>
+          <span>Paga los productos que te lleves</span>
+        </div>
+      </div>
+      <div class="strip-sep"></div>
+      <div class="strip-item">
+        <span class="strip-icon">🌾</span>
+        <div>
+          <strong>Sin aditivos</strong>
+          <span>Harinas integrales orgánicas</span>
+        </div>
+      </div>
+    </section>
 
+
+    <!-- LISTADO DE PRODUCTOS -->
+    <div id="product-list" ></div>
+
+    <!-- PANEL CARRITO REDISEÑADO (Clases de minorista) -->
+    <section id="cart" class="cart-panel">
+      <div class="cart-header">
+        <div class="cart-header-title">🛒 Pedido Mayorista</div>
+        <button class="close-cart" onclick="toggleCart()">✕</button>
+      </div>
+
+      <div class="cart-body">
+        <ul id="cart-items"></ul>
+
+        <div class="cart-section-title">Datos del Local</div>
+        
+        <div class="inputs">
+          <label for="name">👤 Nombre del Local / Sucursal</label>
+          <input type="text" id="name" placeholder="Especificá el nombre de tu sucursal">
+        </div>
+
+        <div class="inputs">
+          <label for="email">📧 Correo electrónico</label>
+          <input type="email" id="email" placeholder="tuemail@ejemplo.com">
+        </div>
+
+        <!-- OPCIÓN RETIRO -->
+        <div class="envio-options" style="margin: 15px 0; padding: 10px; background: #f9f9f9; border-radius: 8px;">
+          <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+            <input type="checkbox" id="retiro-btn" style="width: 20px; height: 20px;">
+            <span>Retiro por local <strong>(10% Descuento)</strong></span>
+          </label>
+        </div>
+
+        <div class="cart-aviso">
+          <div class="cart-aviso-stock">
+            ⚠️ En caso de falta de stock, se ajustará el total al momento de la entrega.
+          </div>
+        </div>
+
+        <!-- TOTALES -->
+        <div class="cart-totales">
+          <div class="cart-total-row cart-total-main">
+            <span>Total</span>
+            <span>$<span id="total">0</span></span>
+          </div>
+          <div class="cart-total-row cart-total-main" id="discount-row">
+            <span>Total con Descuento</span>
+            <span>$<span id="total-with-discount">0</span></span>
+          </div>
+        </div>
+
+        <button class="finalize-btn" id="submit-btn" onclick="enviarPedido()">
+          Finalizar Pedido Mayorista →
+        </button>
+      </div>
+    </section>
+
+    <!-- WhatsApp flotante -->
+    <a href="https://wa.me/5491165603579?text=Hola! Consulta Mayorista" 
+       class="whatsapp-float" 
+       target="_blank">
+      <img src="/media_static/whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
+    </a>
   </main>
 
   <footer>
-    <p>&copy; 2026 Plutarco Panadería</p>
+    <p>&copy; 2026 Plutarco Panadería · Área Mayorista</p>
   </footer>
 
+  <!-- Script específico de mayorista -->
   <script src="/tienda/static/mayorista/script.js"></script>
 </body>
 </html>

@@ -1,13 +1,5 @@
 
-/* ================================================================
-   PLUTARCO ALMACÉN — sobre-nosotros.css
-   Complemento a styles-develop.css con estilos específicos
-   ================================================================ */
-
-body {
-  margin: 0;
-}
-
+/* Estilos específicos para sobre nosotros */
 .sobre-nosotros-main {
   background-color: var(--color-fondo-claro);
 }
@@ -18,9 +10,7 @@ body {
   padding: 2rem 1.5rem;
 }
 
-/* ================================================================
-   HERO SECTION
-   ================================================================ */
+/* HERO ABOUT */
 .about-hero {
   background: linear-gradient(135deg, var(--color-primario) 0%, var(--color-terceario) 100%);
   color: #fff;
@@ -42,9 +32,7 @@ body {
   font-weight: 500;
 }
 
-/* ================================================================
-   HISTORIA SECTION
-   ================================================================ */
+/* HISTORIA */
 .about-historia {
   background: #fff;
   padding: 3rem 0;
@@ -93,9 +81,7 @@ body {
   display: block;
 }
 
-/* ================================================================
-   ESPECIALIDADES SECTION
-   ================================================================ */
+/* ESPECIALIDADES */
 .about-especialidades {
   background: var(--color-fondo-claro);
   padding: 3rem 0;
@@ -127,9 +113,7 @@ body {
   font-weight: 700;
 }
 
-/* ================================================================
-   VALORES SECTION
-   ================================================================ */
+/* VALORES */
 .about-valores {
   background: #fff;
   padding: 3rem 0;
@@ -145,7 +129,7 @@ body {
 
 .valores-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 2rem;
 }
 
@@ -182,9 +166,7 @@ body {
   line-height: 1.5;
 }
 
-/* ================================================================
-   UBICACIÓN SECTION
-   ================================================================ */
+/* UBICACIÓN */
 .about-ubicacion {
   background: var(--color-fondo-claro);
   padding: 3rem 0;
@@ -222,7 +204,7 @@ body {
 }
 
 .ubicacion-info a {
-  color: var(--color-acento);
+  color: var(--color-primario);
   text-decoration: none;
   font-weight: 600;
 }
@@ -233,7 +215,7 @@ body {
 
 .btn-contacto {
   display: inline-block;
-  background: var(--color-acento);
+  background: var(--color-primario);
   color: #fff;
   padding: 0.8rem 1.5rem;
   border-radius: 2rem;
@@ -242,14 +224,16 @@ body {
   font-weight: 600;
   transition: background 0.3s;
 }
+.btn-contacto a{
+  color: #fff;
+  text-decoration: none;
+}
 
 .btn-contacto:hover {
   background: #b87530;
 }
 
-/* ================================================================
-   GALERÍA SECTION
-   ================================================================ */
+/* GALERÍA */
 .about-galeria {
   background: #fff;
   padding: 3rem 0;
@@ -282,9 +266,7 @@ body {
   transform: scale(1.05);
 }
 
-/* ================================================================
-   CTA FINAL SECTION
-   ================================================================ */
+/* CTA FINAL */
 .about-cta {
   background: linear-gradient(135deg, var(--color-primario) 0%, var(--color-terceario) 100%);
   color: #fff;
@@ -345,9 +327,7 @@ body {
   background: rgba(255,255,255,0.3);
 }
 
-/* ================================================================
-   FOOTER
-   ================================================================ */
+/* FOOTER */
 .footer-simple {
   background: var(--color-footer-bg);
   color: var(--color-footer-text);
@@ -356,9 +336,7 @@ body {
   font-size: 0.9rem;
 }
 
-/* ================================================================
-   RESPONSIVE — TABLET
-   ================================================================ */
+/* RESPONSIVE */
 @media (max-width: 768px) {
   .about-hero-title {
     font-size: 1.8rem;
@@ -381,98 +359,5 @@ body {
 
   .valores-grid {
     grid-template-columns: 1fr;
-  }
-
-  .about-container {
-    padding: 1.5rem 1rem;
-  }
-}
-
-/* ================================================================
-   RESPONSIVE — MOBILE
-   ================================================================ */
-@media (max-width: 600px) {
-  .about-hero {
-    padding: 2.5rem 1rem;
-  }
-
-  .about-hero-title {
-    font-size: 1.5rem;
-  }
-
-  .about-hero-subtitle {
-    font-size: 0.95rem;
-  }
-
-  .historia-text h2,
-  .espec-text h2,
-  .valores-titulo,
-  .about-ubicacion h2,
-  .about-galeria h2 {
-    font-size: 1.4rem;
-  }
-
-  .historia-text p,
-  .espec-text p {
-    font-size: 0.95rem;
-  }
-
-  .espec-lista li {
-    font-size: 0.95rem;
-  }
-
-  .valor-card {
-    padding: 1.5rem;
-  }
-
-  .valor-emoji {
-    font-size: 2.5rem;
-  }
-
-  .valor-card h3 {
-    font-size: 1.05rem;
-  }
-
-  .valor-card p {
-    font-size: 0.9rem;
-  }
-
-  .ubicacion-grid {
-    padding: 1.5rem;
-  }
-
-  .ubicacion-info h3 {
-    font-size: 1.2rem;
-  }
-
-  .ubicacion-info p {
-    font-size: 0.9rem;
-  }
-
-  .galeria-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .galeria-grid img {
-    height: 250px;
-  }
-
-  .cta-content h2 {
-    font-size: 1.5rem;
-  }
-
-  .cta-content p {
-    font-size: 1rem;
-  }
-
-  .btn-primary,
-  .btn-secondary {
-    padding: 0.7rem 1.5rem;
-    font-size: 0.95rem;
-    width: 100%;
-  }
-
-  .about-container {
-    padding: 1.5rem 1rem;
   }
 }

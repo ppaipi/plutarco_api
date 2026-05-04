@@ -76,8 +76,8 @@ def optimize_image(file):
     return buffer.getvalue()
 
 
-@router.post("/upload/{codigo}/", status_code=status.HTTP_201_CREATED)
-async def upload_image_for_product(codigo: str, file: UploadFile = File(...)):
+@router.post("/upload/{id}/", status_code=status.HTTP_201_CREATED)
+async def upload_image_for_product(id: str, file: UploadFile = File(...)):
     # validate extension
     name = file.filename or ''
     ext = os.path.splitext(name)[1].lower()
@@ -85,7 +85,7 @@ async def upload_image_for_product(codigo: str, file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Formato de imagen no soportado")
 
     # filename
-    filename = f"{codigo}{ext}"
+    filename = f"{id}{ext}"
     path = os.path.join(IMAGES_DIR, filename)
 
     try:
@@ -101,7 +101,7 @@ async def upload_image_for_product(codigo: str, file: UploadFile = File(...)):
     try:
         with get_session() as s:
             prod = s.exec(
-                select(Product).where(Product.codigo == codigo)
+                select(Product).where(Product.id == id)
             ).first()
 
             url = f"/images/{filename}"

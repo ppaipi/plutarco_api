@@ -30,6 +30,14 @@
       <input type="text" id="store-status-msg" class="msg"/>
     </div>
   </section>
+  <h2>Anuncio Actual</h2>
+    <div>
+      <label for="anuncio-store-status">Anuncio habilitado</label>
+      <input type="checkbox" id="anuncio-store-status" />
+      <img src="" id="anuncio-img" alt="">
+      <button id="anuncio-button">Subir nueva imagen</button>
+    </div>
+  </section>
 <section class="container">
   <section class="card card-section" style="width:100%">
     <h2>Empleados disponibles</h2>
@@ -69,17 +77,30 @@
   </section>
   <section class="card card-section">
     <h2>Orden de Categorías y Subcategorías</h2>
-    
+
     <div class="order-section">
       <div class="order-subsection">
         <h3>Categorías</h3>
         <div class="selector-wrapper">
           <input id="config-category-input" list="categories-list" class="input selector-input" placeholder="Selecciona o escribe una categoría">
           <datalist id="categories-list"></datalist>
+          <input id="config-category-emoji" class="input emoji-input" placeholder="Emoji" maxlength="2">
+          <input id="config-category-color" type="color" class="input color-input">
           <button id="btn-add-category" class="btn small">+ Añadir</button>
         </div>
-        <div id="category-tags" class="tags-display"></div>
-        <input id="config-category-order" type="hidden">
+        <div class="table-container">
+          <table id="category-table" class="config-table">
+            <thead>
+              <tr>
+                <th>Orden</th>
+                <th>Emoji</th>
+                <th>Nombre</th>
+                <th>Color</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
         <div id="category-order-msg" class="msg"></div>
       </div>
 
@@ -88,10 +109,23 @@
         <div class="selector-wrapper">
           <input id="config-subcategory-input" list="subcategories-list" class="input selector-input" placeholder="Selecciona o escribe una subcategoría">
           <datalist id="subcategories-list"></datalist>
+          <input id="config-subcategory-emoji" class="input emoji-input" placeholder="Emoji" maxlength="2">
+          <input id="config-subcategory-color" type="color" class="input color-input">
           <button id="btn-add-subcategory" class="btn small">+ Añadir</button>
         </div>
-        <div id="subcategory-tags" class="tags-display"></div>
-        <input id="config-subcategory-order" type="hidden">
+        <div class="table-container">
+          <table id="subcategory-table" class="config-table">
+            <thead>
+              <tr>
+                <th>Orden</th>
+                <th>Emoji</th>
+                <th>Nombre</th>
+                <th>Color</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
         <div id="subcategory-order-msg" class="msg"></div>
       </div>
     </div>

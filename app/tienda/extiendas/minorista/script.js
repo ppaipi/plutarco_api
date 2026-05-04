@@ -3,33 +3,8 @@ let allProducts = [];
 let enabledCodes = [];
 let rankingMap = {};
 let cart = {};
-const CART_STORAGE_KEY = 'plutarco_cart';
-let lastAddToCart = Date.now();
 let filteredProducts = [];
 let currentFilter = 'Todas';
-
-function saveCartToSession() {
-  try {
-    sessionStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
-  } catch (err) {
-    console.warn('No se pudo guardar el carrito en sessionStorage:', err);
-  }
-}
-
-function loadCartFromSession() {
-  try {
-    const stored = sessionStorage.getItem(CART_STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed && typeof parsed === 'object') {
-        cart = parsed;
-      }
-    }
-  } catch (err) {
-    console.warn('No se pudo cargar el carrito desde sessionStorage:', err);
-    cart = {};
-  }
-}
 let currentSearch = '';
 let costoEnvioActual = 0;
 let indiceCategoria = '';
@@ -45,7 +20,6 @@ let autocomplete;
 const LOCAL_ADDRESS = 'Ibera 3852, Coghlan, CABA, Argentina.';
 let ordenCategorias = [];
 let ordenSubCategorias = [];
-const botonWpp = document.getElementById('boton-wpp');
 
 
 let direccionValidaGoogle = false; // Variable global para saber si la dirección es válida de Google
@@ -69,12 +43,8 @@ async function loadProducts() {
         }));
         products = allProducts;
         filteredProducts = [...products];
-        loadCartFromSession();
         renderCategoryMenu();
         renderProductsByCategory(filteredProducts);
-        renderCategoryCards();
-        renderQuickCats();
-        updateCart();
         const header = document.querySelector('header');
         if (header) {
             header.scrollIntoView({ behavior: 'smooth' });
@@ -94,6 +64,7 @@ async function loadconfig(){
     cantidadMinima = configuracion.pedido_minimo || 0;
     ordenCategorias = configuracion.orden_categorias || ordenCategorias;
     ordenSubCategorias = configuracion.orden_subcategorias || ordenSubCategorias;
+    estadoTienda = configuracion.status !== false;
     mensajeEstado = configuracion.mensage_status || "";
     console.log("Configuración cargada:", configuracion);
     cargarDiasEntrega();
@@ -364,30 +335,6 @@ function scrollToElementoVerMas(clase, intentos = 10) {
     }
   }
 }
-function consultarWhatsApp() {
-  const addressInput = document.getElementById('address');
-  const direccion = addressInput ? addressInput.value.trim() : '';
-  let mensaje= `Hola! Vengo de la pagina web.`;
-
-
-  if (cart != null && Object.keys(cart).length > 0) {
-    subtotal = document.getElementById('cart-summary') ? document.getElementById('cart-summary').querySelector('p strong').textContent.replace('Total: $', '') : '0';
-    totalEnvio = document.getElementById('cart-summary') ? document.getElementById('cart-summary').querySelectorAll('p')[1].textContent.replace('Envío: $', '') : '0';
-    total = document.getElementById('cart-summary') ? document.getElementById('cart-summary').querySelector('p strong').textContent.replace('Total: $', '') : '0';
-    mensaje += ` \nQuisiera consultar sobre el siguiente pedido: \nSubtotal: $${subtotal} \nEnvío: $${totalEnvio} \nTotal: $${total}. \nDetalle:`;
-    for (let codigo in cart) {
-      const producto = products.find(p => p.Codigo === codigo);
-      const cantidad = cart[codigo];
-      mensaje += ` \n- ${producto.Nombre}: ${cantidad} unidades`;
-    }
-    if (direccion) {
-      mensaje += ` \nLa dirección de envío es ${direccion}.`;
-    }
-  }
-
-  const url = `https://wa.me/5491150168920?text=${encodeURIComponent(mensaje)}`;
-  window.open(url, '_blank');
-}
 
 
 function renderProductsByCategory(productos) {
@@ -408,16 +355,14 @@ function renderProductsByCategory(productos) {
       if (indiceCategoria) {
         scrollToElementoVerMas(indiceCategoria);
       } else {
-        categoriasVisuales = document.getElementById('categorias-visuales');
-        if (categoriasVisuales) {
-          categoriasVisuales.scrollIntoView({ behavior: 'smooth' });
-        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     };
     container.appendChild(backBtn);
   }
 
   let categorias = [...new Set(productos.map(p => p.Categoria))];
+
 
   categorias.sort((a, b) => {
     const indexA = ordenCategorias.indexOf(a);
@@ -595,7 +540,6 @@ function searchProduct() {
 }
 
 function addToCart(codigo) {
-  lastAddToCart = Date.now();
   cart[codigo] = (cart[codigo] || 0) + 1;
   updateProductCard(codigo);
   const addressInput = document.getElementById('address');
@@ -605,7 +549,6 @@ function addToCart(codigo) {
     updateCart();
   }
   animateCart();
-  animarCarrito();
   // Oculta el mensaje de error del carrito si hay productos
   actualizarErrorCarrito();
 }
@@ -709,7 +652,6 @@ function updateCart() {
 
   for (let codigo in cart) {
     const producto = products.find(p => p.Codigo === codigo);
-    if (!producto) continue;
     const cantidad = cart[codigo];
     const li = document.createElement('li');
     li.innerHTML = `
@@ -760,52 +702,34 @@ function updateCart() {
       <p><strong>Total: $${total}</strong></p>
     `;
   }
+}
 
-  saveCartToSession();
-}
-function Ocultar(elemento) {
-  if (elemento) {
-    elemento.classList.add('oculto');
-    elemento.classList.remove('visible');
-  }
-}
-function Mostrar(elemento) {
-  if (elemento) {
-    elemento.classList.remove('oculto');
-    elemento.classList.add('visible');
-  }
-}
 
 
 
 const cart2 = document.getElementById('cart');
+const cartButtonWrapper = document.getElementById('cart-icon-fixed');
 const openCartButton = document.getElementById('cart-icon');
+const closeCartButton = document.querySelector('.close-cart');
 
+openCartButton.addEventListener('click', () => {
+  cart2.classList.add('visible');
+  cartButtonWrapper.style.display = 'none';
+});
+
+closeCartButton.addEventListener('click', () => {
+  cart2.classList.remove('visible');
+  cartButtonWrapper.style.display = 'block';
+});
 
 function toggleCart() {
   const cartPanel = document.getElementById('cart');
   cartPanel.classList.toggle('visible');
-  if (botonWpp) {
-    if (cartPanel.classList.contains('visible')) {
-      Ocultar(botonWpp);
-    } else {
-      Mostrar(botonWpp);
-    }
-  }
-}
-function animarCarrito() {
-  const cart = document.getElementById('cart-icon');
-  if(!cart) return;
-  // Reiniciar animación si ya estaba activa
-  cart.classList.remove("cart-animate");
-  void cart.offsetWidth; // truco para reiniciar
-  cart.classList.add("cart-animate");
 }
 
 function animateCart() {
   const icon = document.getElementById('cart-count');
-  if (!icon || !cart) return;
-  animarCarrito(cart);
+  if (!icon) return;
   icon.style.transform = 'scale(1.3)';
   icon.style.transition = 'transform 0.2s';
   setTimeout(() => icon.style.transform = 'scale(1)', 200);
@@ -817,19 +741,6 @@ function validarDia(event) {
   const day = date.getDay();
   input.setCustomValidity([3, 6].includes(day) ? '' : 'Solo se permite miércoles o sábados');
 }
-setInterval(() => {
-  const ahora = Date.now();
-  const unMinuto = 10000;
-
-  if (
-    Object.keys(cart).length > 0 &&
-    ahora - lastAddToCart >= unMinuto
-  ) {
-    animarCarrito();
-    animateCart();
-    lastAddToCart = Date.now();
-  }
-}, 5000);
 
 
 let timeoutEnvio; // para evitar llamadas repetidas
@@ -1246,178 +1157,6 @@ function todosCamposValidados() {
   return Object.values(validacionCampos).every(v => v === true);
 }
 
-function mostrarConfirmacionPedido(data) {
-  console.log("Datos recibidos para confirmación:", data);
-  const order = data.order;
-  const productos = data.productos;
-
-  // Generar HTML de productos
-  let productosHtml = '';
-  productos.forEach(p => {
-    let subtotal = (p.precio_unitario || 0) * (p.cantidad || 0);
-    productosHtml += `
-        <table class="producto-table">
-          <tr>
-            <td class="prod-badge" >
-              <div>
-                ${p.cantidad}
-              </div>
-            </td>
-            <td class="prod-info">
-              <div class="prod-nombre">
-                ${p.nombre}
-              </div>
-              <div class="prod-precio">
-                ${Math.round(p.precio_unitario)} c/u
-              </div>
-            </td>
-            <td class="prod-subtotal" align="right">
-              <div>
-                $${Math.round(subtotal)}
-              </div>
-            </td>
-          </tr>
-        </table>
-    `;
-  });
-
-  // Formatear fecha de entrega
-  let diaEntregaFormateado = 'No especificado';
-  if (order.dia_entrega) {
-    const fecha = new Date(order.dia_entrega);
-    diaEntregaFormateado = fecha.toLocaleDateString('es-AR', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  }
-
-  const html = `
-<div class="confirm-wrap">
- 
-  <div class="confirm-header">
-    <div class="confirm-header-logo">
-      <img src="/media_static/iconpng.ico" alt="Plutarco">
-    </div>
-    <div class="confirm-header-text">
-      <strong>Plutarco Almacén</strong>
-      <span>Coghlan · CABA</span>
-    </div>
-    <div class="confirm-header-badge">Pedido #${order.id}</div>
-  </div>
- 
-  <div class="confirm-body">
- 
-    <!-- Éxito -->
-    <div class="confirm-success">
-      <div class="confirm-success-icon">✓</div>
-      <h2>¡Tu pedido fue recibido!</h2>
-      <p>
-        Te enviamos una copia de este resumen a tu correo electrónico.<br>
-        Confirmamos en cuanto recibamos el comprobante de pago.
-      </p>
-    </div>
- 
-    <hr class="section-divider">
- 
-    <!-- Datos de entrega -->
-    <div class="confirm-section-title">Datos de entrega</div>
-    <div class="confirm-info-grid">
-      <div class="confirm-info-item">
-        <div class="label">Nombre</div>
-        <div class="value">${order.nombre_completo}</div>
-      </div>
-      <div class="confirm-info-item">
-        <div class="label">Teléfono</div>
-        <div class="value">${order.telefono}</div>
-      </div>
-      <div class="confirm-info-item">
-        <div class="label">Día de entrega</div>
-        <div class="value">${diaEntregaFormateado}</div>
-      </div>
-      <div class="confirm-info-item">
-        <div class="label">Email</div>
-        <div class="value">${order.correo}</div>
-      </div>
-      <div class="confirm-info-item full">
-        <div class="label">Dirección</div>
-        <div class="value">${order.direccion}</div>
-      </div>
-      <div class="confirm-info-item full">
-        <div class="label">Comentario</div>
-        <div class="value">${order.comentario}</div>
-      </div>
-    </div>
- 
-    <hr class="section-divider">
- 
-    <!-- Productos -->
-    <div class="confirm-section-title">Productos</div>
-    <div class="confirm-products">
-      ${productosHtml}
-    </div>
- 
-    <hr class="section-divider">
- 
-    <!-- Totales -->
-    <div class="confirm-totales">
-      <div class="total-row">
-        <span>Subtotal</span>
-        <span>$${Math.round(order.subtotal)}</span>
-      </div>
-      <div class="total-row">
-        <span>Envío</span>
-        <span>$${Math.round(order.envio_cobrado)}</span>
-      </div>
-      <div class="total-main">
-        <span>Total</span>
-        <span>$${Math.round(order.total)}</span>
-      </div>
-    </div>
- 
-    <hr class="section-divider">
- 
-    <!-- Info de pago -->
-    <div class="confirm-pago">
-      <h4>💸 Información de pago</h4>
-      <p>Transferí <strong>$${Math.round(order.total)}</strong> al alias <strong>plutarco.almacen</strong></p>
-      <p>Cuenta a nombre de <strong>Darío Chapur</strong>.</p>
-      <p>
-        Envianos el comprobante por
-        <a href="https://wa.me/5491150168920?text=Hola Plutarco Almacén! Realicé el pedido #${order.id} de $${Math.round(order.total)} a nombre de ${order.nombre_completo}" target="_blank">
-          WhatsApp al 11 5016-8920
-        </a>
-        o respondé el email de confirmación. Confirmamos tu pedido al recibirlo.
-      </p>
-    </div>
- 
-    <!-- Aviso stock -->
-    <div class="confirm-stock">
-      <p>⚠️ Si algún producto no tiene stock, te avisamos y hacemos la devolución del monto correspondiente.</p>
-    </div>
- 
-  </div>
- 
-  <!-- FOOTER -->
-  <div class="confirm-footer">
-    <p>¿Consultas? Escribinos por WhatsApp o respondé el email de confirmación.</p>
-    <button class="btn-volver" onclick="location.reload()">Volver a la tienda</button>
-    <a href="https://wa.me/5491150168920?text=Hola Plutarco Almacén! Tengo una consulta sobre mi pedido #${order.id} a nombre de ${order.nombre_completo}" target="_blank">
-    <button class="btn-wsp">
-      Consultar por WhatsApp
-    </button>
-    </a>
-  </div>
- 
-</div>
-  `;
-
-  // Reemplazar el contenido de la página
-  document.body.innerHTML = html;
-  document.body.style.backgroundColor = '#f4f0e8'; // Color de fondo de la tienda
-}
-
 async function enviarPedido() {
   intentoEnviar = true;
   validarCamposEnTiempoReal();
@@ -1480,6 +1219,7 @@ async function enviarPedido() {
       console.error('Error al enviar pedido:', res.status, text);
       alert('Error enviando pedido. Intente nuevamente.');
     } else {
+      alert('Pedido enviado con éxito! Recibirá al mail instrucciones de pago.');
 
       // --- VACIAR TODO EL CARRITO ---
       cart = {};                      // borra los productos seleccionados
@@ -1496,9 +1236,6 @@ async function enviarPedido() {
       document.getElementById('address').value = '';
       document.getElementById('pickup-day').value = '';
       document.getElementById('comment').value = '';
-      const orderData = await res.json();
-      mostrarConfirmacionPedido(orderData);
-
     }
   } catch (err) {
     console.error('Fetch error enviarPedido:', err);
@@ -1508,8 +1245,6 @@ async function enviarPedido() {
     intentoEnviar = false; // reset para el próximo pedido
   }
 }
-
-
 
 // --- Funcionalidad modal descripción producto ---
 function crearModalDescripcion(prod) {
@@ -1562,14 +1297,10 @@ function crearModalDescripcion(prod) {
   const controls = document.createElement('div');
   controls.className = 'modal-controls quantity-controls'; // Aplica ambas clases
 
-function renderControls() {
+  function renderControls() {
     controls.innerHTML = '';
     const cantidad = cart[prod.Codigo] || 0;
-    
     if (cantidad > 0) {
-      // Si hay productos, aplicamos la clase que hace los botones pequeños y redondos
-      controls.className = 'modal-controls quantity-controls'; 
-      
       const btnMenos = document.createElement('button');
       btnMenos.textContent = '-';
       btnMenos.className = '';
@@ -1595,9 +1326,6 @@ function renderControls() {
       controls.appendChild(spanCantidad);
       controls.appendChild(btnMas);
     } else {
-      // Si NO hay productos, le quitamos 'quantity-controls' para que el botón grande se vea bien
-      controls.className = 'modal-controls'; 
-      
       const btnAgregar = document.createElement('button');
       btnAgregar.textContent = 'Agregar al carrito';
       btnAgregar.className = 'agregar-btn';
@@ -1609,11 +1337,8 @@ function renderControls() {
       controls.appendChild(btnAgregar);
     }
   }
-  
-  // Recuerda declarar el contenedor sin la clase conflictiva inicialmente:
-  // const controls = document.createElement('div');
-  // (La clase se asignará dinámicamente dentro del renderControls)
   renderControls();
+
   infoDiv.appendChild(title);
   infoDiv.appendChild(desc);
   infoDiv.appendChild(price);
@@ -1755,7 +1480,7 @@ function toggleZoom(idImagen) {
 
 function mostrarMensajeEstado(){
   const divEstado = document.getElementById("status-div");
-  Mostrar(divEstado);
+  if(divEstado){divEstado.classList.toggle("oculto");}
   const estadoTitle = document.getElementById("status-title");
   const estadoMensaje = document.getElementById("status-msg");
   if(estadoTitle) {estadoTitle.textContent = "Tienda pausada";}
@@ -1764,86 +1489,6 @@ function mostrarMensajeEstado(){
 }
 
 
-const CATEGORIA_EMOJIS = {
-  'Panificados Integrales':    { emoji: '🥖', color: '#fef9f0' },
-  'Organicos':                 { emoji: '🌿', color: '#f0f7f3' },
-  'Refrigerados':              { emoji: '🥛', color: '#f0f4f7' },
-  'Congelados':                { emoji: '❄️', color: '#eef4f8' },
-  'Infusiones':                { emoji: '🧉', color: '#f7f3ee' },
-  'Productos Sueltos':         { emoji: '🌻', color: '#f7f3ee' },
-  'Cereales y Legumbres':      { emoji: '🫘', color: '#fef9f0' },
-  'Aceites y Conservas':       { emoji: '🫒', color: '#f7f4ee' },
-  'Snack':                     { emoji: '🍿', color: '#fef9f0' },
-  'Mieles y Dulces':           { emoji: '🍯', color: '#fff8e8' },
-  'Bebidas':                   { emoji: '🍵', color: '#f0f7f3' },
-  'Sales y Condimentos':       { emoji: '🧄', color: '#f5f5f5' },
-  'Cosmetica natural':         { emoji: '🧴', color: '#fdf0f5' },
-  'Pollos y Carnes Pastoril':  { emoji: '🥩', color: '#fdf2f0' },
-  'Suplementos':               { emoji: '💪', color: '#f0f5f7' },
-  'default':                   { emoji: '🛒', color: '#f7f3ee' },
-};
-
-function renderCategoryCards() {
-  const container = document.getElementById('categoria-cards');
-  if (!container) return;
-
-  container.innerHTML = '';
-
-  // Obtener categorías únicas
-  let categorias = [...new Set(products.map(p => p.Categoria))];
-
-  // Respetar orden configurado
-  categorias.sort((a, b) => {
-    const ia = ordenCategorias.indexOf(a);
-    const ib = ordenCategorias.indexOf(b);
-    const pa = ia !== -1 ? ia : Infinity;
-    const pb = ib !== -1 ? ib : Infinity;
-    if (pa !== pb) return pa - pb;
-    return a.localeCompare(b, 'es');
-  });
-
-  categorias.forEach(cat => {
-    const info = CATEGORIA_EMOJIS[cat] || CATEGORIA_EMOJIS['default'];
-    const count = products.filter(p => p.Categoria === cat).length;
-
-    const card = document.createElement('div');
-    card.className = 'cat-visual-card';
-    card.style.backgroundColor = info.color;
-    card.onclick = () => {
-      filterCategory(cat);
-      indiceCategoria = '';
-      // Scroll suave a los productos
-      setTimeout(() => {
-        const productList = document.getElementById('product-list');
-        if (productList) productList.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 80);
-    };
-
-    card.innerHTML = `
-      <div class="cat-visual-emoji">${info.emoji}</div>
-      <div class="cat-visual-nombre">${cat}</div>
-      <div class="cat-visual-count">${count} producto${count !== 1 ? 's' : ''}</div>
-    `;
-
-    container.appendChild(card);
-  });
-}
-
-
-
-function renderQuickCats() {
-  const container = document.getElementById('quick-cat-pills');
-  if (!container) return;
-  const top5 = [...new Set(products.map(p => p.Categoria))].slice(0, 5);
-  top5.forEach(cat => {
-    const info = CATEGORIA_EMOJIS[cat] || CATEGORIA_EMOJIS['default'];
-    const pill = document.createElement('div');
-    pill.className = 'quick-pill';
-    pill.textContent = `${info.emoji} ${cat}`;
-    pill.onclick = () => filterCategory(cat);
-    container.appendChild(pill);
-  });
-}
 
 window.onload = async () => {
   await loadconfig();
@@ -1864,7 +1509,9 @@ window.onload = async () => {
         renderProductsByCategory(filteredProducts);
       };
     }
-    Mostrar(botonContacto);
+    if (botonContacto) {
+      botonContacto.classList.toggle("oculto");
+    }
   }
   else{
     mostrarMensajeEstado();

@@ -281,11 +281,11 @@ async function renderProducts(productos) {
   for (const categoria of categorias) {
     // Crear contenedor de la categoría
     const categoriaDiv = document.createElement('div');
-    categoriaDiv.className = 'category-section';
+    categoriaDiv.className = 'categoria-section';
 
     // Título de la categoría
     const titulo = document.createElement('h2');
-    titulo.className = 'category-title';
+    titulo.className = 'categoria-titulo';
     titulo.textContent = categoria;
     categoriaDiv.appendChild(titulo);
 
@@ -296,16 +296,6 @@ async function renderProducts(productos) {
     // Esperar todas las tarjetas de producto
     const cards = await Promise.all(porCategoria[categoria].map(prod => createProductCard(prod)));
     cards.forEach(card => grid.appendChild(card));
-
-    // Agregar espacios en blanco para completar la fila
-    const resto = porCategoria[categoria].length % 5;
-    if (resto !== 0) {
-      for (let i = resto; i < 5; i++) {
-        const vacio = document.createElement("div");
-        vacio.className = "product espacio-vacio";
-        grid.appendChild(vacio);
-      }
-    }
 
     categoriaDiv.appendChild(grid);
     container.appendChild(categoriaDiv);
@@ -325,7 +315,6 @@ async function searchProduct() {
 
   filteredProducts = products.filter(p => p.Nombre.toLowerCase().includes(term));
   await renderProducts(filteredProducts);
-  document.getElementById('product-list').scrollIntoView({behavior:'smooth'});
 }
 
 function addToCart(codigo) {
@@ -627,19 +616,14 @@ async function crearModalDescripcion(prod) {
 
   // Controles de carrito
   const controls = document.createElement('div');
-  controls.className = 'modal-controls quantity-controls'; // Aplica ambas clases
+  controls.className = 'modal-controls quantity-controls';
 
-function renderControls() {
+  function renderControls() {
     controls.innerHTML = '';
     const cantidad = cart[prod.Codigo] || 0;
-    
     if (cantidad > 0) {
-      // Si hay productos, aplicamos la clase que hace los botones pequeños y redondos
-      controls.className = 'modal-controls quantity-controls'; 
-      
       const btnMenos = document.createElement('button');
       btnMenos.textContent = '-';
-      btnMenos.className = '';
       btnMenos.onclick = (e) => {
         e.stopPropagation();
         updateQuantity(prod.Codigo, -1);
@@ -651,7 +635,6 @@ function renderControls() {
 
       const btnMas = document.createElement('button');
       btnMas.textContent = '+';
-      btnMas.className = '';
       btnMas.onclick = (e) => {
         e.stopPropagation();
         updateQuantity(prod.Codigo, 1);
@@ -662,9 +645,6 @@ function renderControls() {
       controls.appendChild(spanCantidad);
       controls.appendChild(btnMas);
     } else {
-      // Si NO hay productos, le quitamos 'quantity-controls' para que el botón grande se vea bien
-      controls.className = 'modal-controls'; 
-      
       const btnAgregar = document.createElement('button');
       btnAgregar.textContent = 'Agregar al carrito';
       btnAgregar.className = 'agregar-btn';

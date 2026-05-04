@@ -164,7 +164,6 @@ function renderList(list) {
           <button class="btn-up">▲</button>
           <button class="btn-down">▼</button>
         </div>
-        <button class="btn-delete">Eliminar</button>
       </div>
     `;
 
@@ -229,7 +228,7 @@ function renderList(list) {
 
     // MODAL IMAGEN
     div.querySelector('.btn-img').addEventListener('click', () => {
-      currentEditCodigo = p.codigo;
+      currentEditCodigo = p.id;
       currentImgLink = p.imagen_url || null;
       modalPreview.src = p.imagen_url ? p.imagen_url : '/media_static/placeholder.jpg';
       modalFile.value = '';

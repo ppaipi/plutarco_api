@@ -53,6 +53,9 @@ def get_product_detail_html(product: Product) -> str:
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+  <script src="/tienda/cart.js"></script>
+  <script src="/tienda/header.js"></script>
+
   <style>
     /* ── Variables (misma paleta que la tienda) ── */
     :root {{

@@ -2,22 +2,17 @@ let products = [];
 let allProducts = [];
 let enabledCodes = [];
 let rankingMap = {};
+let filteredProducts = [];
+let currentFilter = 'Todas';
 let anuncioUrl = null;
 
 let currentSearch = '';
 let indiceCategoria = '';
 let descripcionesPorCodigo = {};
+let ordenCategorias = [];
+let CATEGORIA_EMOJIS = {};
+let ordenSubCategorias = [];
 let categorias = [];
-
-let configuracion = {};
-let pedidoMinimo = false;
-let cantidadMinima = 0;
-let diasEntregaConfig = [];
-let preciosEnvioConfig = [];
-let estadoTienda = true;
-let mensajeEstado = "";
-let autocomplete;
-const LOCAL_ADDRESS = 'Ibera 3852, Coghlan, CABA, Argentina.';
 
 let direccionValidaGoogle = false; // Variable global para saber si la dirección es válida de Google
 function escapeHtml(s){ if(!s) return ''; return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -28,7 +23,6 @@ async function loadProducts() {
         const res = await fetch('https://plutarco-api.fly.dev/products/enabled');
         const data = await res.json();
         allProducts = data.map(item => ({
-            Id: item.id,
             Codigo: item.codigo,
             Nombre: item.nombre,
             Descripcion: item.descripcion,
@@ -42,16 +36,11 @@ async function loadProducts() {
         products = allProducts;
         filteredProducts = [...products];
         categorias = [...new Set(products.map(p => p.Categoria))].filter(c => c && c.trim() !== '');
-
-        loadCartFromSession();
-        renderCategoryMenu();
-        renderProductsByCategory(filteredProducts);
-        renderCategoryCards();
-        renderQuickCats();
-        updateCart();
-
+        // Funciones del carrito y header se cargan desde módulos
         const header = document.querySelector('header');
-        if (header) header.scrollIntoView({ behavior: 'smooth' });
+        if (header) {
+            header.scrollIntoView({ behavior: 'smooth' });
+        }
     } catch (err) {
         console.error("Error cargando productos:", err);
     }
@@ -60,24 +49,24 @@ async function loadProducts() {
 
 async function loadconfig(){
     try {
-        const res = await fetch('https://plutarco-api.fly.dev/config/list');
-        configuracion = await res.json();
-        diasEntregaConfig = configuracion.dias_entrega || [];
-        preciosEnvioConfig = configuracion.envio_tarifas || [];
-        cantidadMinima = configuracion.pedido_minimo || 0;
-        categoriasConfig = configuracion.orden_categorias || ordenCategorias;
-        ordenCategorias = categoriasConfig.filter(c => c.name).map(c => c.name);
-        CATEGORIA_EMOJIS = categoriasConfig;
-        if (configuracion.anuncio_habilitado) {
-            anuncioUrl = configuracion.anuncio_imagen_url || null;
-        }
-        ordenSubCategorias = configuracion.orden_subcategorias || ordenSubCategorias;
-        mensajeEstado = configuracion.mensage_status || "";
-        estadoTienda = configuracion.status !== false; // ← FALTABA ESTA LÍNEA
-        cargarDiasEntrega();
-    } catch (err) {
-        console.error("Error cargando configuración:", err);
+    const res = await fetch('https://plutarco-api.fly.dev/config/list');
+    configuracion = await res.json();
+    diasEntregaConfig = configuracion.dias_entrega || [];
+    preciosEnvioConfig = configuracion.envio_tarifas || [];
+    cantidadMinima = configuracion.pedido_minimo || 0;
+    categoriasConfig = configuracion.orden_categorias || ordenCategorias;
+    ordenCategorias = categoriasConfig.filter(c => c.name).map(c => c.name);
+    CATEGORIA_EMOJIS = categoriasConfig;
+    if (configuracion.anuncio_habilitado) {
+      anuncioUrl = configuracion.anuncio_imagen_url || null;
     }
+    ordenSubCategorias = configuracion.orden_subcategorias || ordenSubCategorias;
+    mensajeEstado = configuracion.mensage_status || "";
+    console.log("Configuración cargada:", configuracion);
+    cargarDiasEntrega();
+  } catch (err) {
+    console.error("Error cargando configuración:", err);
+  }
 }
 
 
@@ -797,7 +786,6 @@ const openCartButton = document.getElementById('cart-icon');
 function toggleCart() {
   const cartPanel = document.getElementById('cart');
   cartPanel.classList.toggle('visible');
-  const botonWpp = document.getElementById('boton-wpp');
   if (botonWpp) {
     if (cartPanel.classList.contains('visible')) {
       Ocultar(botonWpp);
@@ -845,6 +833,13 @@ setInterval(() => {
 }, 5000);
 
 
+let timeoutEnvio; // para evitar llamadas repetidas
+let ultimaDireccionConsultada = "";
+let ultimoResultadoEnvio = null;
+let calculandoEnvio = false; // Estado de carga
+
+// Cache mejorado: almacenar múltiples resultados
+let cacheEnvios = {};
 
 function initAutocomplete() {
   const input = document.getElementById('address');

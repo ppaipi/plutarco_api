@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Producto — Plutarco Almacén</title>
+  <meta name="description" content="Plutarco Almacén">
+
+  <!-- Mismo CSS que la tienda -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Google Maps (mismo que tienda.html) -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=TU_API_KEY&libraries=places"
+    defer>
+  </script>
+
+  <!-- Entry point de esta página (ES Module) -->
+  <script type="module" src="js/main-producto.js"></script>
+</head>
+<body>
+
+  <!-- ── Header (igual al de tienda.html) ─────────────────────────── -->
+  <header>
+    <a href="/" id="click_header">
+      <img src="/media_static/iconpng.ico" alt="Plutarco Almacén" class="logo">
+      <span class="header-title">Plutarco Almacén</span>
+    </a>
+
+    <!-- Carrito -->
+    <div id="cart-icon" onclick="toggleCart()">
+      🛒 <span id="cart-count">0</span>
+    </div>
+  </header>
+
+  <!-- ── Contenido del producto ────────────────────────────────────── -->
+  <main>
+    <div id="producto-detalle">
+      <!-- Renderizado por main-producto.js -->
+      <p style="text-align:center;padding:2rem;">Cargando producto...</p>
+    </div>
+  </main>
+
+  <!-- ── Panel lateral del carrito (igual que tienda.html) ─────────── -->
+  <div id="cart">
+    <h2>Tu carrito</h2>
+    <ul id="cart-items"></ul>
+    <div id="cart-summary"></div>
+
+    <!-- Formulario de pedido -->
+    <div id="pedido-form">
+      <div class="inputs">
+        <label for="pickup-day">Día de entrega</label>
+        <select id="pickup-day" name="pickup-day"></select>
+      </div>
+      <div class="inputs">
+        <label for="name">Nombre completo</label>
+        <input type="text" id="name" placeholder="Juan Pérez">
+      </div>
+      <div class="inputs">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="juan@mail.com">
+      </div>
+      <div class="inputs">
+        <label for="phone">Teléfono</label>
+        <input type="tel" id="phone" placeholder="11 1234-5678">
+      </div>
+      <div class="inputs">
+        <label for="address">Dirección de envío</label>
+        <input type="text" id="address" placeholder="Av. Ejemplo 1234, CABA">
+        <div id="envio-msg"></div>
+      </div>
+      <div class="inputs">
+        <label for="comment">Comentario</label>
+        <textarea id="comment" placeholder="Aclaraciones, referencias, etc."></textarea>
+      </div>
+
+      <button id="submit-btn" onclick="enviarPedido()" disabled>
+        Finalizar Pedido
+      </button>
+    </div>
+  </div>
+
+  <!-- Overlay carrito -->
+  <div id="status-div" class="oculto">
+    <h2 id="status-title"></h2>
+    <p id="status-msg"></p>
+  </div>
+
+</body>
+</html>

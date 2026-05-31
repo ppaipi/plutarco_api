@@ -1,0 +1,439 @@
+/* ================================================================
+   pd-addon.css — Detalle de producto Plutarco Almacén
+   Clases 100% nuevas (pd-*) → sin colisión con styles.css
+   ================================================================ */
+
+/* ──────────────────────────────────────────────────────────────
+   SUBNAV / BREADCRUMB
+   ────────────────────────────────────────────────────────────── */
+.pd-subnav {
+  background: var(--color-terceario);
+  border-top: 1px solid rgba(255,255,255,0.07);
+}
+.pd-subnav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.42rem 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+.pd-back-btn {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.22);
+  color: #fff;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.3rem 0.9rem;
+  border-radius: 2rem;
+  text-decoration: none;
+  transition: background 0.15s;
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.pd-back-btn:hover { background: rgba(255,255,255,0.25); }
+.pd-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  font-size: 0.72rem;
+  color: rgba(255,255,255,0.52);
+  flex-wrap: wrap;
+}
+.pd-breadcrumb a   { color: rgba(255,255,255,0.82); text-decoration: none; font-weight: 600; }
+.pd-breadcrumb a:hover { color: #fff; }
+.pd-breadcrumb span { color: rgba(255,255,255,0.32); }
+
+/* ──────────────────────────────────────────────────────────────
+   CONTENEDOR DE PÁGINA
+   ────────────────────────────────────────────────────────────── */
+.pd-page {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 1.6rem 1.2rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  box-sizing: border-box;
+}
+@media (max-width: 600px) {
+  .pd-page { padding: 0.9rem 0.7rem 0; gap: 0.85rem; }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   FICHA PRINCIPAL — imagen + detalle
+   ────────────────────────────────────────────────────────────── */
+.pd-main {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  background: #fff;
+  border-radius: 1.4rem;
+  border: 1px solid var(--color-borde-claro);
+  box-shadow: 0 4px 28px rgba(26,92,120,0.09);
+  overflow: hidden;
+  align-items: stretch;
+}
+@media (max-width: 860px) { .pd-main { grid-template-columns: 340px 1fr; } }
+@media (max-width: 680px) { .pd-main { grid-template-columns: 1fr; } }
+
+/* ── Imagen ── */
+.pd-img-panel {
+  position: relative;
+  background: #f0f3f4;
+  overflow: hidden;
+  cursor: zoom-in;
+  min-height: 460px;
+}
+@media (max-width: 860px) { .pd-img-panel { min-height: 360px; } }
+@media (max-width: 680px) {
+  .pd-img-panel { min-height: 0; height: 58vw; max-height: 300px; }
+}
+.pd-main-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+  transition: transform 0.5s ease;
+}
+.pd-img-panel:hover .pd-main-img { transform: scale(1.06); }
+.pd-img-badge {
+  position: absolute;
+  bottom: 12px; right: 14px;
+  background: rgba(0,0,0,0.48);
+  color: #fff;
+  font-size: 0.64rem;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 2rem;
+  letter-spacing: 0.3px;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+/* ── Panel de detalle ── */
+.pd-detail-panel {
+  padding: 1.9rem 1.8rem 1.7rem;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--color-gris-claro);
+  box-sizing: border-box;
+}
+@media (max-width: 860px) { .pd-detail-panel { padding: 1.5rem 1.4rem; } }
+@media (max-width: 680px) {
+  .pd-detail-panel { border-left: none; border-top: 1px solid var(--color-gris-claro); padding: 1.2rem 1rem 1.5rem; }
+}
+
+/* Tags */
+.pd-tags { display: flex; flex-wrap: wrap; gap: 0.38rem; margin-bottom: 1rem; }
+.pd-tag {
+  font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.45px; padding: 0.28rem 0.8rem;
+  border-radius: 2rem; background: #eef5f8;
+  color: var(--color-primario); border: 1px solid #cce0ea; line-height: 1;
+}
+.pd-tag-green { background: #e8f8ef; color: #1d8a48; border-color: #b8e8cb; }
+
+/* Título */
+.pd-title {
+  font-size: 1.75rem; font-weight: 700;
+  color: var(--color-terceario);
+  line-height: 1.16; margin: 0 0 1.1rem;
+  letter-spacing: -0.3px;
+}
+@media (max-width: 860px) { .pd-title { font-size: 1.4rem; } }
+@media (max-width: 680px) { .pd-title { font-size: 1.28rem; margin-bottom: 0.8rem; } }
+
+/* Precio */
+.pd-price-block {
+  display: flex; align-items: baseline;
+  gap: 0.7rem; flex-wrap: wrap;
+  padding: 1rem 0;
+  border-top: 1px solid var(--color-gris-claro);
+  border-bottom: 1px solid var(--color-gris-claro);
+  margin-bottom: 1.1rem;
+}
+.pd-price {
+  font-size: 2.6rem; font-weight: 800;
+  color: var(--color-primario); line-height: 1; letter-spacing: -0.5px;
+}
+.pd-price-note { font-size: 0.72rem; color: #aaa; font-weight: 500; }
+@media (max-width: 680px) { .pd-price { font-size: 2rem; } }
+
+/* Franja pago */
+.pd-payment-strip {
+  display: flex; align-items: center; gap: 0.55rem;
+  padding: 0.6rem 1rem;
+  background: #f2fafd; border: 1px solid #cce6f0;
+  border-radius: 0.7rem; margin-bottom: 1.1rem;
+  font-size: 0.77rem; color: var(--color-primario); font-weight: 600;
+}
+.pd-payment-arrow { margin-left: auto; opacity: 0.4; font-size: 0.9rem; }
+
+/* Cantidad */
+.pd-qty-block { display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.pd-qty-label {
+  font-size: 0.72rem; font-weight: 700;
+  color: var(--color-gris-medio); text-transform: uppercase; letter-spacing: 0.6px;
+}
+.pd-qty-ctrl {
+  display: flex; align-items: center;
+  background: var(--color-fondo-claro);
+  border: 1.5px solid var(--color-borde-claro);
+  border-radius: 3rem; padding: 3px;
+}
+.pd-qty-btn {
+  width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: #fff; color: var(--color-primario);
+  font-size: 1.2rem; font-weight: 700; cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+  transition: background 0.18s, color 0.18s;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit; flex-shrink: 0;
+}
+.pd-qty-btn:hover { background: var(--color-primario); color: #fff; }
+.pd-qty-num {
+  min-width: 46px; text-align: center;
+  font-size: 1.05rem; font-weight: 700; color: var(--color-terceario);
+}
+
+/* Botón agregar */
+.pd-btn-add {
+  width: 100%; padding: 1.05rem 1.4rem; border-radius: 3rem; border: none;
+  background: var(--color-primario); color: #fff;
+  font-size: 1rem; font-weight: 700; cursor: pointer;
+  box-shadow: 0 5px 18px rgba(26,92,120,0.25);
+  transition: background 0.22s, transform 0.14s, box-shadow 0.22s;
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  font-family: 'Quicksand', sans-serif; letter-spacing: 0.2px;
+  margin-bottom: 0.7rem; box-sizing: border-box;
+}
+.pd-btn-add:hover { background: var(--color-terceario); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(26,92,120,0.3); }
+.pd-btn-add:active { transform: translateY(0); box-shadow: none; }
+.pd-btn-add.agregado { background: #27ae60; animation: pdpulse .4s ease; }
+@keyframes pdpulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.025)} }
+
+/* Botón WhatsApp */
+.pd-btn-wsp {
+  display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+  text-decoration: none; color: #25D366; font-weight: 700; font-size: 0.88rem;
+  padding: 0.8rem 1rem; border: 2px solid #25D366; border-radius: 3rem;
+  transition: background 0.18s, color 0.18s;
+  font-family: 'Quicksand', sans-serif; margin-bottom: 1.1rem;
+  box-sizing: border-box;
+}
+.pd-btn-wsp:hover { background: #25D366; color: #fff; }
+
+/* Garantías — grid de tarjetas */
+.pd-guarantees {
+  border-top: 1px solid var(--color-gris-claro);
+  padding-top: 1rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+@media (max-width: 400px) { .pd-guarantees { grid-template-columns: 1fr; } }
+
+.pd-guarantee-item {
+  display: flex; align-items: flex-start; gap: 0.52rem;
+  padding: 0.65rem 0.7rem;
+  background: var(--color-fondo-claro);
+  border-radius: 0.75rem;
+  border: 1px solid var(--color-borde-claro);
+}
+.pd-guarantee-item > .g-icon {
+  font-size: 1.05rem; flex-shrink: 0; margin-top: 0.1rem; line-height: 1;
+}
+.pd-guarantee-item > .g-text { display: flex; flex-direction: column; gap: 0.08rem; }
+.pd-guarantee-item .g-title {
+  display: block; font-size: 0.73rem; font-weight: 700;
+  color: var(--color-terceario);
+}
+.pd-guarantee-item .g-desc {
+  display: block; font-size: 0.65rem;
+  color: var(--color-gris-medio); line-height: 1.35;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   CARD GENÉRICA — cabecera + cuerpo
+   ────────────────────────────────────────────────────────────── */
+.pd-card-v2 {
+  background: #fff;
+  border-radius: 1.3rem;
+  border: 1px solid var(--color-borde-claro);
+  box-shadow: 0 2px 14px rgba(0,0,0,0.045);
+  overflow: hidden;
+}
+.pd-card-header {
+  display: flex; align-items: center; gap: 0.6rem;
+  padding: 0.95rem 1.6rem;
+  background: #f7fbfd;
+  border-bottom: 1px solid var(--color-gris-claro);
+}
+@media (max-width: 600px) { .pd-card-header { padding: 0.8rem 1.1rem; } }
+.pd-card-header-icon { font-size: 1rem; line-height: 1; }
+.pd-card-header h2 {
+  font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.8px; color: var(--color-primario); margin: 0;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   DESCRIPCIÓN
+   ────────────────────────────────────────────────────────────── */
+.pd-desc-body {
+  padding: 1.5rem 1.6rem;
+  font-size: 0.93rem; line-height: 1.88;
+  color: #484848; font-weight: 500;
+}
+@media (max-width: 600px) { .pd-desc-body { padding: 1.1rem; font-size: 0.89rem; } }
+
+/* ──────────────────────────────────────────────────────────────
+   FEATURES — grilla divisor interno
+   ────────────────────────────────────────────────────────────── */
+.pd-features-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+}
+@media (max-width: 600px) { .pd-features-grid { grid-template-columns: 1fr 1fr; } }
+
+.pd-feature {
+  display: flex; flex-direction: column; align-items: center;
+  text-align: center; gap: 0.5rem;
+  padding: 1.4rem 1rem;
+  border-right: 1px solid var(--color-gris-claro);
+}
+.pd-feature:last-child { border-right: none; }
+
+@media (max-width: 600px) {
+  .pd-feature:nth-child(2)           { border-right: none; }
+  .pd-feature:nth-child(1),
+  .pd-feature:nth-child(2)           { border-bottom: 1px solid var(--color-gris-claro); }
+}
+
+.pd-feature-icon { font-size: 1.9rem; line-height: 1; }
+.pd-feature strong {
+  font-size: 0.77rem; font-weight: 700;
+  color: var(--color-terceario); line-height: 1.2;
+}
+.pd-feature span {
+  font-size: 0.68rem; color: var(--color-gris-medio); line-height: 1.38;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   ENTREGA Y PAGO — grilla con divisores
+   ────────────────────────────────────────────────────────────── */
+.pd-delivery-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+@media (max-width: 480px) { .pd-delivery-grid { grid-template-columns: 1fr; } }
+
+.pd-delivery-item {
+  display: flex; gap: 0.8rem; align-items: flex-start;
+  padding: 1.15rem 1.4rem;
+  border-right: 1px solid var(--color-gris-claro);
+  border-bottom: 1px solid var(--color-gris-claro);
+  box-sizing: border-box;
+}
+.pd-delivery-item:nth-child(2n)     { border-right: none; }
+.pd-delivery-item:nth-last-child(-n+2) { border-bottom: none; }
+@media (max-width: 480px) {
+  .pd-delivery-item                 { border-right: none; }
+  .pd-delivery-item:last-child      { border-bottom: none; }
+  .pd-delivery-item:nth-last-child(-n+2) { border-bottom: 1px solid var(--color-gris-claro); }
+  .pd-delivery-item:nth-last-child(1)    { border-bottom: none; }
+}
+@media (max-width: 600px) { .pd-delivery-item { padding: 1rem 1.1rem; } }
+
+.pd-delivery-icon { font-size: 1.3rem; flex-shrink: 0; margin-top: 0.1rem; line-height: 1; }
+.pd-delivery-item > .d-text { display: flex; flex-direction: column; gap: 0.22rem; }
+.pd-delivery-item strong { font-size: 0.8rem; font-weight: 700; color: var(--color-terceario); }
+.pd-delivery-item span   { font-size: 0.73rem; color: var(--color-gris-medio); line-height: 1.45; }
+
+/* ──────────────────────────────────────────────────────────────
+   CTA — IR A LA TIENDA
+   ────────────────────────────────────────────────────────────── */
+.pd-cta-block {
+  background: linear-gradient(130deg, var(--color-primario) 0%, var(--color-terceario) 100%);
+  border-radius: 1.3rem;
+  padding: 1.8rem 2rem;
+  display: flex; align-items: center; gap: 1.4rem;
+  box-shadow: 0 6px 30px rgba(26,92,120,0.18);
+  margin-bottom: 0.5rem;
+}
+.pd-cta-emoji  { font-size: 2.4rem; flex-shrink: 0; }
+.pd-cta-body   { flex: 1; }
+.pd-cta-body h3 {
+  font-size: 1.05rem; font-weight: 700; color: #fff; margin: 0 0 0.3rem;
+}
+.pd-cta-body p  {
+  font-size: 0.79rem; color: rgba(255,255,255,0.72); line-height: 1.5; margin: 0;
+}
+.pd-cta-link {
+  background: #fff; color: var(--color-terceario); border: none;
+  padding: 0.75rem 1.4rem; border-radius: 2rem;
+  font-weight: 700; font-size: 0.85rem; cursor: pointer;
+  text-decoration: none; white-space: nowrap;
+  transition: background 0.15s, transform 0.12s;
+  font-family: 'Quicksand', sans-serif; display: inline-block; flex-shrink: 0;
+}
+.pd-cta-link:hover { background: var(--color-fondo-claro); transform: translateY(-1px); }
+@media (max-width: 600px) {
+  .pd-cta-block { flex-direction: column; text-align: center; gap: 0.9rem; padding: 1.5rem 1.2rem; }
+  .pd-cta-link  { width: 100%; text-align: center; }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   OVERLAY CARRITO
+   ────────────────────────────────────────────────────────────── */
+.cart-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.42); z-index: 999;
+  backdrop-filter: blur(2px);
+}
+.cart-overlay.visible { display: block; }
+
+/* ──────────────────────────────────────────────────────────────
+   TOAST
+   ────────────────────────────────────────────────────────────── */
+.pd-toast {
+  position: fixed; bottom: 1.6rem; left: 50%;
+  transform: translateX(-50%) translateY(90px);
+  background: var(--color-terceario); color: #fff;
+  padding: 0.76rem 1.5rem; border-radius: 2rem;
+  font-size: 0.86rem; font-weight: 600;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+  z-index: 9000; opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  white-space: nowrap; pointer-events: none;
+}
+.pd-toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+/* ──────────────────────────────────────────────────────────────
+   LIGHTBOX
+   ────────────────────────────────────────────────────────────── */
+.pd-lightbox {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.92); z-index: 15000;
+  align-items: center; justify-content: center; cursor: zoom-out;
+}
+.pd-lightbox.open { display: flex; }
+.pd-lightbox img {
+  max-width: 92vw; max-height: 90vh; border-radius: 10px;
+  box-shadow: 0 16px 60px rgba(0,0,0,0.6);
+  cursor: default; object-fit: contain;
+}
+.pd-lightbox-close {
+  position: fixed; top: 14px; right: 14px;
+  background: rgba(255,255,255,0.14); color: #fff;
+  border: none; border-radius: 50%;
+  width: 38px; height: 38px; font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.pd-lightbox-close:hover { background: rgba(255,255,255,0.28); }

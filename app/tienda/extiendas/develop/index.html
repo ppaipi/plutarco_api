@@ -45,7 +45,9 @@
     <div class="header-search">
       <span class="header-search-icon">🔍</span>
       <input type="text" id="search-input"
-        placeholder="Buscar producto...">
+        placeholder="Buscar producto..."
+        onkeydown="if(event.key==='Enter') searchProduct();"
+        oninput="searchProduct()">
     </div>
     <button class="header-cart-btn" id="cart-icon" onclick="toggleCart()">
       🛒 <span id="cart-count">0</span>

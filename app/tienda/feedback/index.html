@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>¿Cómo fue tu experiencia? | Plutarco Almacén</title>
+  <link rel="icon" href="/media_static/icon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --azul:  #1A5C78;
+      --azul-dk: #124460;
+      --amber: #C8863A;
+      --verde: #27ae60;
+      --crema: #F4F0E8;
+      --gris:  #6b7280;
+    }
+
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Quicksand',sans-serif; }
+    body { background: var(--crema); min-height: 100vh; }
+
+    /* ── Header ── */
+    header {
+      background: var(--azul);
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+    .h-logo { height: 36px; border-radius: 6px; }
+    .h-title { color: #fff; font-weight: 700; font-size: 1rem; }
+    .h-sub   { color: rgba(255,255,255,0.65); font-size: 0.72rem; display: block; }
+
+    /* ── Card ── */
+    .wrap {
+      max-width: 560px;
+      margin: 2rem auto;
+      padding: 0 1rem 3rem;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 1.4rem;
+      padding: 2rem;
+      box-shadow: 0 6px 28px rgba(26,92,120,0.09);
+      border: 1px solid #e6e0d4;
+    }
+
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--azul-dk);
+      margin-bottom: 0.4rem;
+    }
+
+    .card-sub {
+      font-size: 0.9rem;
+      color: var(--gris);
+      margin-bottom: 1.8rem;
+      line-height: 1.5;
+    }
+
+    /* ── Estrellas ── */
+    .rating-group { margin-bottom: 1.4rem; }
+
+    .rating-label {
+      display: block;
+      font-size: 0.82rem;
+      font-weight: 700;
+      color: var(--azul);
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+
+    .stars {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .star {
+      font-size: 2rem;
+      cursor: pointer;
+      color: #d4ccbf;
+      transition: color 0.15s, transform 0.12s;
+      user-select: none;
+    }
+
+    .star.active       { color: #f59e0b; }
+    .star:hover        { transform: scale(1.15); }
+
+    /* ── Comentario ── */
+    textarea {
+      width: 100%;
+      border: 1.5px solid #e6e0d4;
+      border-radius: 0.8rem;
+      padding: 0.8rem 1rem;
+      font-family: 'Quicksand', sans-serif;
+      font-size: 0.9rem;
+      resize: vertical;
+      min-height: 90px;
+      color: #333;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    textarea:focus { border-color: var(--azul); }
+
+    /* ── Input nombre ── */
+    .inp-wrap { margin-bottom: 1.4rem; }
+    .inp-wrap label { display:block; font-size:0.82rem; font-weight:700; color:var(--azul); margin-bottom:0.4rem; text-transform:uppercase; letter-spacing:0.4px; }
+    input[type="text"] {
+      width: 100%;
+      border: 1.5px solid #e6e0d4;
+      border-radius: 0.8rem;
+      padding: 0.65rem 1rem;
+      font-family: 'Quicksand', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    input[type="text"]:focus { border-color: var(--azul); }
+
+    /* ── Botón ── */
+    .btn-submit {
+      width: 100%;
+      padding: 1rem;
+      background: var(--azul);
+      color: #fff;
+      border: none;
+      border-radius: 2rem;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 1rem;
+      transition: background 0.18s, transform 0.12s;
+      font-family: 'Quicksand', sans-serif;
+    }
+
+    .btn-submit:hover    { background: var(--azul-dk); transform: translateY(-2px); }
+    .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── Éxito ── */
+    .success-screen {
+      display: none;
+      text-align: center;
+      padding: 2rem 1rem;
+    }
+
+    .success-icon {
+      width: 72px; height: 72px;
+      background: #eaf7ef;
+      border-radius: 50%;
+      margin: 0 auto 1.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+
+    .success-title { font-size: 1.4rem; font-weight: 700; color: var(--azul-dk); margin-bottom: 0.6rem; }
+    .success-sub   { font-size: 0.92rem; color: var(--gris); line-height: 1.6; }
+
+    .btn-volver {
+      display: inline-block;
+      margin-top: 1.5rem;
+      background: var(--amber);
+      color: #fff;
+      padding: 0.8rem 2rem;
+      border-radius: 2rem;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 0.95rem;
+      transition: background 0.18s;
+    }
+
+    .btn-volver:hover { background: #b07430; }
+
+    footer {
+      text-align: center;
+      padding: 1rem;
+      font-size: 0.82rem;
+      color: #aaa;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <img src="/media_static/iconpng.ico" alt="Logo" class="h-logo">
+  <div>
+    <span class="h-title">Plutarco Almacén</span>
+    <span class="h-sub">Coghlan · CABA</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="card">
+
+    <!-- Formulario -->
+    <div id="form-screen">
+      <h1 class="card-title">¿Cómo fue tu experiencia? 🌟</h1>
+      <p class="card-sub">
+        Tu opinión nos ayuda a mejorar cada día.<br>
+        Solo te llevará un minuto, ¡gracias por tu tiempo!
+      </p>
+
+      <!-- Nombre (opcional) -->
+      <div class="inp-wrap">
+        <label for="inp-nombre">Tu nombre (opcional)</label>
+        <input type="text" id="inp-nombre" placeholder="Ej: María G.">
+      </div>
+
+      <!-- Estrellas × 4 dimensiones -->
+      <div class="rating-group">
+        <span class="rating-label">🤝 Atención y servicio</span>
+        <div class="stars" data-field="servicio">
+          <span class="star" data-val="1">★</span>
+          <span class="star" data-val="2">★</span>
+          <span class="star" data-val="3">★</span>
+          <span class="star" data-val="4">★</span>
+          <span class="star" data-val="5">★</span>
+        </div>
+      </div>
+
+      <div class="rating-group">
+        <span class="rating-label">🥖 Calidad de los productos</span>
+        <div class="stars" data-field="calidad">
+          <span class="star" data-val="1">★</span>
+          <span class="star" data-val="2">★</span>
+          <span class="star" data-val="3">★</span>
+          <span class="star" data-val="4">★</span>
+          <span class="star" data-val="5">★</span>
+        </div>
+      </div>
+
+      <div class="rating-group">
+        <span class="rating-label">🚚 Entrega y puntualidad</span>
+        <div class="stars" data-field="entrega">
+          <span class="star" data-val="1">★</span>
+          <span class="star" data-val="2">★</span>
+          <span class="star" data-val="3">★</span>
+          <span class="star" data-val="4">★</span>
+          <span class="star" data-val="5">★</span>
+        </div>
+      </div>
+
+      <div class="rating-group">
+        <span class="rating-label">🛒 Experiencia de compra online</span>
+        <div class="stars" data-field="experiencia">
+          <span class="star" data-val="1">★</span>
+          <span class="star" data-val="2">★</span>
+          <span class="star" data-val="3">★</span>
+          <span class="star" data-val="4">★</span>
+          <span class="star" data-val="5">★</span>
+        </div>
+      </div>
+
+      <!-- Comentario libre -->
+      <div class="rating-group">
+        <span class="rating-label">💬 ¿Algo más que quieras contarnos?</span>
+        <textarea id="inp-comentario" placeholder="Escribí tu comentario aquí (opcional)..."></textarea>
+      </div>
+
+      <button class="btn-submit" id="btn-enviar" onclick="enviarFeedback()">
+        Enviar mi opinión →
+      </button>
+    </div>
+
+    <!-- Pantalla de éxito -->
+    <div class="success-screen" id="success-screen">
+      <div class="success-icon">🌟</div>
+      <h2 class="success-title">¡Muchas gracias!</h2>
+      <p class="success-sub">
+        Tu opinión es muy importante para nosotros.<br>
+        Nos ayuda a seguir mejorando cada día.
+      </p>
+      <a href="/" class="btn-volver">Volver a la tienda →</a>
+    </div>
+
+  </div>
+</div>
+
+<footer>© 2026 Plutarco Almacén · Coghlan, Buenos Aires</footer>
+
+<script>
+  const API = 'https://plutarco-api.fly.dev';
+
+  // Leer order_id de la URL
+  const orderId = new URLSearchParams(window.location.search).get('order');
+
+  // Estado de los ratings
+  const ratings = { servicio: null, calidad: null, entrega: null, experiencia: null };
+
+  // ── Lógica de estrellas ──────────────────────────────────────────────────
+  document.querySelectorAll('.stars').forEach(group => {
+    const field = group.dataset.field;
+    const stars = group.querySelectorAll('.star');
+
+    stars.forEach(star => {
+      // Hover: iluminar hasta la estrella señalada
+      star.addEventListener('mouseenter', () => {
+        const val = parseInt(star.dataset.val);
+        stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= val));
+      });
+
+      // Mouseleave: volver al valor guardado
+      group.addEventListener('mouseleave', () => {
+        const saved = ratings[field] || 0;
+        stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= saved));
+      });
+
+      // Click: guardar valor
+      star.addEventListener('click', () => {
+        ratings[field] = parseInt(star.dataset.val);
+        stars.forEach(s => s.classList.toggle('active', parseInt(s.dataset.val) <= ratings[field]));
+      });
+    });
+  });
+
+  // ── Enviar ────────────────────────────────────────────────────────────────
+  async function enviarFeedback() {
+    const btn = document.getElementById('btn-enviar');
+    btn.disabled = true;
+    btn.textContent = 'Enviando...';
+
+    const payload = {
+      order_id:    orderId ? parseInt(orderId) : null,
+      nombre:      document.getElementById('inp-nombre').value.trim() || null,
+      servicio:    ratings.servicio,
+      calidad:     ratings.calidad,
+      entrega:     ratings.entrega,
+      experiencia: ratings.experiencia,
+      comentario:  document.getElementById('inp-comentario').value.trim() || null,
+    };
+
+    try {
+      const res = await fetch(`${API}/feedback/submit`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        document.getElementById('form-screen').style.display    = 'none';
+        document.getElementById('success-screen').style.display = 'block';
+      } else {
+        alert('Hubo un error al enviar. Por favor intentá de nuevo.');
+        btn.disabled = false;
+        btn.textContent = 'Enviar mi opinión →';
+      }
+    } catch (e) {
+      alert('Error de red. Por favor intentá de nuevo.');
+      btn.disabled = false;
+      btn.textContent = 'Enviar mi opinión →';
+    }
+  }
+</script>
+
+</body>
+</html>

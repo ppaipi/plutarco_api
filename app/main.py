@@ -25,7 +25,10 @@ app = FastAPI(
 # ===================== CORS =====================
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "https://www.plutarcoalmacen.com.ar",
+        "https://plutarcoalmacen.com.ar"
+    ],
     allow_credentials=False,  # Wildcard origins con credentials=True no es permitido por browsers
     allow_methods=["*"],
     allow_headers=["*"],

@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analytics — Panel Admin Plutarco</title>
+  <link rel="icon" href="/media_static/icon_admin.ico">
+  <link rel="stylesheet" href="/static/styles/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    /* ── Métricas principales ── */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .metric-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      box-shadow: var(--shadow-light);
+      transition: box-shadow 0.15s;
+    }
+
+    .metric-card:hover { box-shadow: var(--shadow); }
+
+    .metric-icon  { font-size: 1.6rem; line-height: 1; }
+    .metric-label { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .metric-value { font-size: 2rem; font-weight: 800; color: var(--accent); line-height: 1; }
+    .metric-sub   { font-size: 0.75rem; color: var(--muted); }
+
+    .metric-card.highlight { border-color: var(--primary); background: linear-gradient(135deg, rgba(11,118,255,0.06), rgba(22,163,74,0.04)); }
+    .metric-card.green .metric-value { color: var(--success); }
+    .metric-card.amber .metric-value { color: #f59e0b; }
+
+    /* ── Funnel ── */
+    .funnel-bar {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 10px;
+    }
+
+    .funnel-label  { width: 180px; font-size: 0.82rem; font-weight: 600; color: var(--muted); flex-shrink: 0; }
+    .funnel-track  { flex: 1; background: var(--bg2); border-radius: 2rem; height: 26px; overflow: hidden; }
+    .funnel-fill   { height: 100%; border-radius: 2rem; transition: width 0.8s ease; display: flex; align-items: center; padding-left: 10px; }
+    .funnel-fill span { font-size: 0.78rem; font-weight: 700; color: #fff; white-space: nowrap; }
+    .funnel-pct    { width: 52px; text-align: right; font-size: 0.78rem; font-weight: 700; color: var(--muted); }
+
+    /* ── Charts ── */
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow-light);
+      margin-bottom: 16px;
+    }
+
+    .chart-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      margin-bottom: 14px;
+    }
+
+    /* ── Feedback ── */
+    .stars-display { color: #f59e0b; font-size: 1.1rem; letter-spacing: 2px; }
+
+    .feedback-item {
+      background: var(--bg2);
+      border-radius: 10px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .feedback-meta  { font-size: 0.75rem; color: var(--muted); margin-bottom: 6px; }
+    .feedback-text  { font-size: 0.88rem; color: var(--accent); line-height: 1.5; }
+    .feedback-ratings { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 8px; }
+    .rating-pill {
+      font-size: 0.72rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 2rem;
+      padding: 3px 10px;
+      color: var(--muted);
+    }
+    .rating-pill .val { font-weight: 800; color: #f59e0b; }
+
+    .unread-badge {
+      background: var(--danger);
+      color: #fff;
+      border-radius: 2rem;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      margin-left: 8px;
+    }
+
+    /* ── Top products ── */
+    .product-rank {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .product-rank:last-child { border-bottom: none; }
+    .rank-num  { font-size: 0.78rem; font-weight: 800; color: var(--muted); width: 20px; }
+    .rank-name { flex: 1; font-size: 0.85rem; font-weight: 600; }
+    .rank-bar  { width: 100px; height: 8px; background: var(--bg2); border-radius: 4px; overflow: hidden; }
+    .rank-fill { height: 100%; background: var(--primary); border-radius: 4px; }
+    .rank-cnt  { font-size: 0.8rem; font-weight: 700; color: var(--muted); width: 30px; text-align: right; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+<header class="topbar">
+  <div class="brand">Plutarco <span class="muted">— Analytics</span></div>
+  <div class="actions">
+    <button id="theme-toggle" class="btn small ghost">🌙</button>
+    <a href="/pedidos/"      class="btn small">Pedidos</a>
+    <a href="/productos"     class="btn small">Productos</a>
+    <a href="/resumen"       class="btn small">Resumen</a>
+    <a href="/configuracion" class="btn small">Configuracion</a>
+    <a href="/analitica"     class="btn small active">Analytics</a>
+    <button id="btn-logout" class="btn ghost">Salir</button>
+  </div>
+</header>
+
+<main class="container">
+
+  <!-- Selector de periodo -->
+  <section class="card controls" style="margin-bottom:16px;">
+    <div class="left">
+      <label style="font-size:0.82rem;color:var(--muted);">Periodo:</label>
+      <select id="period-select" class="input" style="width:160px;" onchange="loadAnalytics()">
+        <option value="7">Últimos 7 días</option>
+        <option value="30" selected>Últimos 30 días</option>
+        <option value="90">Últimos 90 días</option>
+      </select>
+    </div>
+    <div class="right">
+      <button class="btn small" onclick="loadAnalytics()">🔄 Actualizar</button>
+    </div>
+  </section>
+
+  <!-- ── Métricas principales ── -->
+  <div class="metrics-grid" id="metrics-grid">
+    <div class="metric-card"><div class="metric-icon">⏳</div><div class="metric-label">Cargando...</div></div>
+  </div>
+
+  <!-- ── Funnel de conversión ── -->
+  <section class="chart-card">
+    <div class="chart-title">📊 Embudo de conversión</div>
+    <div id="funnel-container">
+      <p style="color:var(--muted);font-size:0.85rem;">Cargando...</p>
+    </div>
+  </section>
+
+  <!-- ── Gráfico por día ── -->
+  <section class="chart-card">
+    <div class="chart-title">📈 Actividad diaria</div>
+    <canvas id="chart-daily" height="80"></canvas>
+  </section>
+
+  <!-- ── 2 columnas: top productos + feedback ── -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="bottom-grid">
+
+    <section class="chart-card">
+      <div class="chart-title">🔥 Productos más agregados al carrito</div>
+      <div id="top-products">
+        <p style="color:var(--muted);font-size:0.85rem;">Cargando...</p>
+      </div>
+    </section>
+
+    <section class="chart-card">
+      <div class="chart-title">
+        ⭐ Feedback de clientes
+        <span id="unread-badge" class="unread-badge" style="display:none;"></span>
+      </div>
+      <div id="feedback-stats" style="margin-bottom:14px;"></div>
+      <div id="feedback-list">
+        <p style="color:var(--muted);font-size:0.85rem;">Cargando...</p>
+      </div>
+    </section>
+
+  </div>
+
+</main>
+</div>
+
+<script type="module" src="/static/scripts/theme.js"></script>
+<script type="module" src="/static/scripts/logout.js"></script>
+<script>
+const API     = 'https://plutarco-api.fly.dev';
+const TOKEN   = localStorage.getItem('token');
+const headers = TOKEN ? { 'x-api-key': TOKEN } : {};
+
+let chartDaily = null;
+
+// ── Cargar analítica ────────────────────────────────────────────────────────
+async function loadAnalytics() {
+  const days = document.getElementById('period-select').value;
+
+  try {
+    const [analyticsRes, feedbackStatsRes, feedbackListRes] = await Promise.all([
+      fetch(`${API}/log/summary?days=${days}`, { headers }),
+      fetch(`${API}/feedback/stats`,                  { headers }),
+      fetch(`${API}/feedback/list?limit=20`,          { headers }),
+    ]);
+
+    const analytics    = await analyticsRes.json();
+    const fbStats      = await feedbackStatsRes.json();
+    const fbList       = await feedbackListRes.json();
+
+    renderMetrics(analytics);
+    renderFunnel(analytics);
+    renderDailyChart(analytics.daily);
+    renderTopProducts(analytics.top_products);
+    renderFeedbackStats(fbStats);
+    renderFeedbackList(fbList);
+
+  } catch (e) {
+    console.error('Error cargando analytics:', e);
+  }
+}
+
+// ── Métricas ─────────────────────────────────────────────────────────────────
+function renderMetrics(data) {
+  const t = data.totals;
+  const c = data.conversion;
+
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric-card">
+      <div class="metric-icon">👁️</div>
+      <div class="metric-label">Visitas</div>
+      <div class="metric-value">${fmt(t.page_views)}</div>
+      <div class="metric-sub">${fmt(t.unique_sessions)} únicos</div>
+    </div>
+    <div class="metric-card amber">
+      <div class="metric-icon">🛒</div>
+      <div class="metric-label">Cart adds</div>
+      <div class="metric-value">${fmt(t.cart_adds)}</div>
+      <div class="metric-sub">productos agregados</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">📂</div>
+      <div class="metric-label">Abrieron carrito</div>
+      <div class="metric-value">${fmt(t.cart_opens)}</div>
+      <div class="metric-sub">de ${fmt(t.page_views)} visitas</div>
+    </div>
+    <div class="metric-card highlight green">
+      <div class="metric-icon">✅</div>
+      <div class="metric-label">Pedidos</div>
+      <div class="metric-value">${fmt(t.orders_placed)}</div>
+      <div class="metric-sub">${c.order_rate}% conversión</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-icon">🎯</div>
+      <div class="metric-label">Conv. carrito</div>
+      <div class="metric-value">${c.cart_rate}%</div>
+      <div class="metric-sub">visitas → carrito</div>
+    </div>
+  `;
+}
+
+// ── Funnel ───────────────────────────────────────────────────────────────────
+function renderFunnel(data) {
+  const t = data.totals;
+  const max = t.page_views || 1;
+
+  const steps = [
+    { label: '👁️  Visitaron la tienda',   val: t.page_views,    color: '#6366f1' },
+    { label: '🛒  Abrieron el carrito',    val: t.cart_opens,    color: '#f59e0b' },
+    { label: '📦  Hicieron un pedido',     val: t.orders_placed, color: '#22c55e' },
+  ];
+
+  const html = steps.map(s => {
+    const pct = max ? Math.round(s.val / max * 100) : 0;
+    return `
+      <div class="funnel-bar">
+        <div class="funnel-label">${s.label}</div>
+        <div class="funnel-track">
+          <div class="funnel-fill" style="width:${pct}%;background:${s.color}">
+            <span>${fmt(s.val)}</span>
+          </div>
+        </div>
+        <div class="funnel-pct">${pct}%</div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('funnel-container').innerHTML = html;
+}
+
+// ── Gráfico diario ────────────────────────────────────────────────────────────
+function renderDailyChart(daily) {
+  const labels  = daily.map(d => d.date.slice(5)); // MM-DD
+  const views   = daily.map(d => d.page_view   || 0);
+  const adds    = daily.map(d => d.cart_add    || 0);
+  const orders  = daily.map(d => d.order_placed || 0);
+
+  const ctx = document.getElementById('chart-daily').getContext('2d');
+  if (chartDaily) chartDaily.destroy();
+
+  chartDaily = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Visitas',  data: views,  borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.08)', tension: 0.35, fill: true,  pointRadius: 3 },
+        { label: 'Agrega al carrito', data: adds, borderColor: '#f59e0b', backgroundColor: 'rgba(245,158,11,0.08)', tension: 0.35, fill: true,  pointRadius: 3 },
+        { label: 'Pedidos',  data: orders, borderColor: '#22c55e', backgroundColor: 'rgba(34,197,94,0.1)',   tension: 0.35, fill: true,  pointRadius: 4 },
+      ],
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top', labels: { boxWidth: 12, font: { size: 11 } } } },
+      scales: {
+        y: { beginAtZero: true, ticks: { precision: 0, font: { size: 11 } } },
+        x: { ticks: { font: { size: 10 } } },
+      },
+    },
+  });
+}
+
+// ── Top productos ─────────────────────────────────────────────────────────────
+function renderTopProducts(products) {
+  if (!products.length) {
+    document.getElementById('top-products').innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Sin datos aún</p>';
+    return;
+  }
+  const max = products[0].count || 1;
+  const html = products.map((p, i) => `
+    <div class="product-rank">
+      <span class="rank-num">${i + 1}</span>
+      <span class="rank-name">${p.name || '—'}</span>
+      <div class="rank-bar"><div class="rank-fill" style="width:${Math.round(p.count/max*100)}%"></div></div>
+      <span class="rank-cnt">${p.count}</span>
+    </div>`).join('');
+
+  document.getElementById('top-products').innerHTML = html;
+}
+
+// ── Feedback stats ────────────────────────────────────────────────────────────
+function renderFeedbackStats(stats) {
+  if (!stats.total) {
+    document.getElementById('feedback-stats').innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Sin feedback recibido aún</p>';
+    return;
+  }
+
+  const badge = document.getElementById('unread-badge');
+  if (stats.no_leidos > 0) {
+    badge.textContent = `${stats.no_leidos} nuevo${stats.no_leidos > 1 ? 's' : ''}`;
+    badge.style.display = 'inline';
+  }
+
+  const p = stats.promedio;
+  const avg = [p.servicio, p.calidad, p.entrega, p.experiencia].filter(Boolean);
+  const global = avg.length ? (avg.reduce((a,b)=>a+b,0)/avg.length).toFixed(1) : '—';
+
+  document.getElementById('feedback-stats').innerHTML = `
+    <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin-bottom:10px;">
+      <div style="font-size:2rem;font-weight:800;color:#f59e0b;">${global}</div>
+      <div>
+        <div class="stars-display">${stars(parseFloat(global))}</div>
+        <div style="font-size:0.75rem;color:var(--muted);">${stats.total} reseñas · ${stats.no_leidos} sin leer</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:0.78rem;">
+      ${rating('🤝 Servicio',   p.servicio)}
+      ${rating('🥖 Calidad',    p.calidad)}
+      ${rating('🚚 Entrega',    p.entrega)}
+      ${rating('🛒 Experiencia', p.experiencia)}
+    </div>`;
+}
+
+function rating(label, val) {
+  if (val == null) return '';
+  return `<div style="background:var(--bg2);border-radius:8px;padding:6px 10px;">
+    <div style="color:var(--muted)">${label}</div>
+    <div style="font-weight:800;color:#f59e0b;">${val} ${stars(val)}</div>
+  </div>`;
+}
+
+// ── Feedback list ─────────────────────────────────────────────────────────────
+function renderFeedbackList(list) {
+  if (!list.length) {
+    document.getElementById('feedback-list').innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Sin feedback recibido aún</p>';
+    return;
+  }
+
+  const html = list.slice(0, 8).map(fb => `
+    <div class="feedback-item" style="${!fb.leido ? 'border-color:var(--primary);' : ''}">
+      <div class="feedback-meta">
+        ${fb.nombre ? `<strong>${fb.nombre}</strong> · ` : ''}
+        ${fb.order_id ? `Pedido #${fb.order_id} · ` : ''}
+        ${new Date(fb.timestamp).toLocaleDateString('es-AR')}
+        ${!fb.leido ? '🔵' : ''}
+      </div>
+      <div class="feedback-ratings">
+        ${ratingPill('🤝', fb.servicio)}
+        ${ratingPill('🥖', fb.calidad)}
+        ${ratingPill('🚚', fb.entrega)}
+        ${ratingPill('🛒', fb.experiencia)}
+      </div>
+      ${fb.comentario ? `<div class="feedback-text" style="margin-top:8px;font-style:italic;">"${fb.comentario}"</div>` : ''}
+    </div>`).join('');
+
+  document.getElementById('feedback-list').innerHTML = html;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function stars(val) {
+  if (!val) return '';
+  const full = Math.round(val);
+  return '★'.repeat(full) + '☆'.repeat(5 - full);
+}
+
+function ratingPill(icon, val) {
+  if (val == null) return '';
+  return `<span class="rating-pill">${icon} <span class="val">${val}/5</span></span>`;
+}
+
+function fmt(n) {
+  return n != null ? n.toLocaleString('es-AR') : '0';
+}
+
+// ── Responsive: colapsar la grid inferior en mobile ───────────────────────────
+function checkLayout() {
+  const g = document.getElementById('bottom-grid');
+  if (g) g.style.gridTemplateColumns = window.innerWidth < 768 ? '1fr' : '1fr 1fr';
+}
+window.addEventListener('resize', checkLayout);
+checkLayout();
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+loadAnalytics();
+</script>
+
+</body>
+</html>

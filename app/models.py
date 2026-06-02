@@ -5,6 +5,7 @@ from datetime import date
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column
 from sqlalchemy import JSON as SA_JSON
+from datetime import datetime
 
 
 # -------------------------
@@ -138,3 +139,28 @@ class Configuracion(SQLModel, table=True):
     # Anuncio
     anuncio_habilitado: Optional[bool] = Field(default=False)
     anuncio_imagen_url: Optional[str] = None
+
+
+class AnalyticsEvent(SQLModel, table=True):
+    __tablename__ = "analytics_events"
+    id:           Optional[int]  = Field(default=None, primary_key=True)
+    timestamp:    datetime       = Field(default_factory=datetime.utcnow, index=True)
+    event_type:   str            = Field(index=True)
+    session_id:   Optional[str]  = Field(default=None, index=True)
+    product_id:   Optional[str]  = None
+    product_name: Optional[str]  = None
+    order_id:     Optional[int]  = None
+    extra:        Optional[dict] = Field(default=None, sa_column=Column(SA_JSON))
+
+class Feedback(SQLModel, table=True):
+    __tablename__ = "feedback"
+    id:          Optional[int] = Field(default=None, primary_key=True)
+    timestamp:   datetime      = Field(default_factory=datetime.utcnow, index=True)
+    order_id:    Optional[int] = Field(default=None, index=True)
+    nombre:      Optional[str] = None
+    servicio:    Optional[int] = None
+    calidad:     Optional[int] = None
+    entrega:     Optional[int] = None
+    experiencia: Optional[int] = None
+    comentario:  Optional[str] = None
+    leido:       bool          = Field(default=False)

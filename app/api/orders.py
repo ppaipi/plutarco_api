@@ -282,6 +282,10 @@ def generar_html_pedido(order: Order) -> str:
         ">
       Consultar por WhatsApp
     </button>
+    <a href="/feedback?order=${order.id}" target="_blank" 
+      style="display:inline-block;margin-top:10px;color:rgba(255,255,255,0.8);font-size:0.85rem;">
+      ⭐ ¿Cómo fue tu experiencia? Dejanos tu opinión →
+    </a>
     </a>
   </div>
  

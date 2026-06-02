@@ -17,6 +17,8 @@ import { mostrarAnuncio, mostrarMensajeEstado, initDropdown } from './ui.js';
 import { cargarDiasEntrega, initFormValidation, enviarPedido } from './form.js';
 import { filteredProducts, setCurrentFilter, setFilteredProducts, setIndiceCategoria, products } from './state.js';
 import { Mostrar }                                        from './utils.js';
+import { trackPageView } from './logs.js';   
+
 
 // ── Exponer funciones globales que usa el HTML con onclick ────────────────────
 // (Alternativa: migrar todos los onclick a addEventListener en initEventListeners)
@@ -54,6 +56,7 @@ window.onload = async () => {
 
     aplicarFiltrosDesdeURL();
 
+    trackPageView();
 
     // Buscador
     document.getElementById('search-input')?.addEventListener('input', searchProduct);

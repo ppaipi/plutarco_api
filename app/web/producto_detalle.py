@@ -24,7 +24,7 @@ def get_product_detail_html(product: Product) -> str:
         "brand": {"@type": "Brand", "name": "Plutarco Almacén"},
         "offers": {
             "@type": "Offer",
-            "url": f"https://plutarcoalmacen.com.ar/{product.id}",
+            "url": f"https://plutarcoalmacen.com.ar/producto/{product.id}",
             "priceCurrency": "ARS",
             "price": str(product.precio),
             "availability": "https://schema.org/InStock"
@@ -49,9 +49,9 @@ def get_product_detail_html(product: Product) -> str:
   <meta property="og:title" content="{product.nombre} | Plutarco Almacén">
   <meta property="og:description" content="{(product.descripcion or '')[:160]}">
   <meta property="og:image" content="{imagen}">
-  <meta property="og:url" content="https://plutarcoalmacen.com.ar/{product.id}">
+  <meta property="og:url" content="https://plutarcoalmacen.com.ar/producto/{product.id}">
   <meta property="og:type" content="product">
-  <link rel="canonical" href="https://plutarcoalmacen.com.ar/{product.id}">
+  <link rel="canonical" href="https://plutarcoalmacen.com.ar/producto/{product.id}">
   <script type="application/ld+json">{json.dumps(schema, ensure_ascii=False)}</script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

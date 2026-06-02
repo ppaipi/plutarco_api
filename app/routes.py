@@ -7,6 +7,9 @@ from app.api.orders import router as orders_router
 from app.api.login import router as login_router
 from app.api.images import router as images_router
 from app.api.config import router as config_router
+from app.api.analytics import router as analytics_router
+from app.api.feedback  import router as feedback_router
+
 
 from app.web.pedidos import router as pedidos_router
 from app.web.productos import router as productos_router
@@ -15,6 +18,9 @@ from app.web.tienda import router as tienda_router
 from app.web.resumen import router as resumen_router
 from app.web.mayorista import router as mayorista_router
 from app.web.producto_detalle import router as producto_detalle_router
+from app.web.analytics_web import router as analytics_web_router
+from app.web.feedback_web  import router as feedback_web_router
+
 from app.config import DIR_TIENDA
 from fastapi.responses import Response, PlainTextResponse
 from app.models import Product
@@ -53,8 +59,11 @@ api_router.include_router(login_router)
 api_router.include_router(images_router)
 api_router.include_router(config_router)
 
-# Página de detalles del producto (DEBE IR AL FINAL - CATCH-ALL)
-# app/routes.py - AGREGA ESTO:
+api_router.include_router(analytics_router)
+api_router.include_router(feedback_router)
+api_router.include_router(analytics_web_router, prefix="/analitica")
+api_router.include_router(feedback_web_router,  prefix="/feedback")
+
 
 @api_router.get("/sitemap.xml")
 async def sitemap_xml():
@@ -92,8 +101,8 @@ async def sitemap_xml():
 
         urls.append(f"""
         <url>
-        <loc>https://plutarcoalmacen.com.ar/{p.id}</loc>
-        <changefreq>weekly</changefreq>
+        <loc>https://plutarcoalmacen.com.ar/producto/{p.id}</loc>
+        <changefreq>daily</changefreq>
         <priority>0.9</priority>
         <lastmod>{lastmod}</lastmod>
         </url>

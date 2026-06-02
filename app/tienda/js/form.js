@@ -10,6 +10,8 @@ import { mostrarMensajeEnvio, getAutocomplete, getDireccionValidaGoogle } from '
 import { updateCart }                     from './cart.js';
 import { filterCategory }                 from './products.js';
 import { capitalize }                     from './utils.js';
+import { trackOrderPlaced } from './logs.js';  // ← nueva línea
+
 
 // ── Estado del formulario ─────────────────────────────────────────────────────
 const validacionCampos = {
@@ -232,7 +234,7 @@ export async function enviarPedido() {
 
   try {
     const orderData = await postOrder(payload);
-
+    trackOrderPlaced(orderData.order?.id);
     setCart({});
     mostrarMensajeEnvio('', 'black');
     window.scrollTo(0, 0);
@@ -331,6 +333,10 @@ function mostrarConfirmacionPedido(data) {
     <button class="btn-volver" onclick="location.reload()">Volver a la tienda</button>
     <a href="https://wa.me/5491150168920?text=Hola Plutarco Almacén! Tengo una consulta sobre mi pedido #${order.id} a nombre de ${order.nombre_completo}" target="_blank">
       <button class="btn-wsp">Consultar por WhatsApp</button>
+    </a>
+    <a href="/feedback?order=${order.id}" target="_blank" 
+      style="display:inline-block;margin-top:10px;color:rgba(255,255,255,0.8);font-size:0.85rem;">
+      ⭐ ¿Cómo fue tu experiencia? Dejanos tu opinión →
     </a>
   </div>
 </div>`;

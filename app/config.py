@@ -50,7 +50,10 @@ PUBLIC_PATHS = [
     "/tienda",
     "/",
     "/orders",  
-    "/products/catalogo",]
+    "/products/catalogo",
+    "/analytics/event",
+    "/feedback/submit",
+    ]
 
 # ===============================
 # RUTAS PROTEGIDAS

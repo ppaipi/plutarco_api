@@ -8,6 +8,7 @@ import {
   WA_NUMBER,
 } from './state.js';
 import { escapeHtml, Ocultar, Mostrar } from './utils.js';
+import { trackCartAdd, trackCartOpen } from './logs.js';  // ← nueva línea
 
 // ── Animación del ícono de carrito ────────────────────────────────────────────
 export function animarCarrito() {
@@ -44,6 +45,8 @@ export function addToCart(codigo) {
   animarCarrito();
   animateCartCount();
   _ocultarErrorCarrito();
+  const prod = products.find(p => p.Codigo === codigo);
+  trackCartAdd(codigo, prod?.Nombre);
 }
 
 export function updateQuantity(codigo, delta) {
@@ -190,6 +193,9 @@ export function toggleCart() {
   const panel    = document.getElementById('cart');
   const botonWpp = document.getElementById('boton-wpp');
   if (!panel) return;
+  if (!panel.classList.contains('visible')) {
+    trackCartOpen();
+  }
   panel.classList.toggle('visible');
   if (botonWpp) {
     panel.classList.contains('visible') ? Ocultar(botonWpp) : Mostrar(botonWpp);

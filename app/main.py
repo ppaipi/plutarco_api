@@ -117,6 +117,10 @@ async def api_key_middleware(request: Request, call_next):
     if any(path.startswith(p) for p in PUBLIC_PATHS):
         return await call_next(request)
 
+    if request.method == "DELETE" and path.startswith("/feedback/"):
+        key = request.headers.get("x-api-key")
+        if key != API_KEY:
+            return JSONResponse({"error": "Acceso denegado"}, status_code=401)
 
     return await call_next(request)
 

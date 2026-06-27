@@ -64,4 +64,9 @@ PROTECTED_PATHS = [
     "/config/envio",
     "/images/delete/",
     "/images/upload/",
+    "/feedback/token/",   
+    "/feedback/request/",
+    "/feedback/list",
+    "/feedback/stats",
+
 ]

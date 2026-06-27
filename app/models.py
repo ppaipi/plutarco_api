@@ -82,6 +82,7 @@ class Order(SQLModel, table=True):
     )
 
     empleado_asignado: Optional[list[int]] = Field(default=None, sa_column=Column(SA_JSON))
+    feedback_recibido: bool = Field(default=False)
 
     def recompute_totals(self) -> None:
         self.subtotal = sum(

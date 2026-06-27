@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from app.models import Product
 from sqlmodel import select, delete
 from app.database import get_session
+from sqlalchemy import and_, or_, cast, String
 import pandas as pd
 import io
 import csv
@@ -439,9 +440,11 @@ def api_set_order(product_id: str, payload: SetOrderPayload):
 # -------------------------
 # BUSCADOR TYPEAHEAD
 # -------------------------
+
 @router.get("/search", response_model=List[Product])
 def api_search(q: Optional[str] = None, limit: int = 20):
     with get_session() as s:
+
         if not q:
             return s.exec(
                 select(Product)
@@ -449,10 +452,29 @@ def api_search(q: Optional[str] = None, limit: int = 20):
                 .limit(limit)
             ).all()
 
-        term = f"%{q.lower().strip()}%"
+        palabras = [
+            p.strip()
+            for p in q.lower().split()
+            if p.strip()
+        ]
+
+        filtros = []
+
+        for palabra in palabras:
+            term = f"%{palabra}%"
+
+            filtros.append(
+                or_(
+                    Product.nombre.ilike(term),
+                    Product.descripcion.ilike(term),
+                    Product.codigo.ilike(term),
+                    cast(Product.id, String).ilike(term),
+                )
+            )
+
         return s.exec(
             select(Product)
-            .where(Product.nombre.ilike(term) | Product.codigo.ilike(term))
+            .where(and_(*filtros))
             .order_by(Product.nombre)
             .limit(limit)
         ).all()

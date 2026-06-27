@@ -2,6 +2,9 @@ let products = [];
 let cart = {};
 let filteredProducts = [];
 let currentSearch = '';
+const imageCache = {};
+
+const MIN_DELIVERY = 60000;
 
 // --- Cargar productos ---
 async function loadProducts() {
@@ -58,14 +61,16 @@ async function mostrarDescripcionProducto(prod) {
   await crearModalDescripcion(prod);
 }
 async function imagenUrl(codigo) {
+  if (imageCache[codigo]) return imageCache[codigo];
   try {
     const response = await fetch(`https://plutarcoalmacen.com.ar/products/img-by-codigo/${codigo}`);
     if (!response.ok) throw new Error("Error");
     const data = await response.json();
-    return data.url || "/media_static/placeholder.jpg";
+    imageCache[codigo] = data.url || "/media_static/placeholder.jpg";
   } catch {
-    return "/media_static/placeholder.jpg";
+    imageCache[codigo] = "/media_static/placeholder.jpg";
   }
+  return imageCache[codigo];
 }
 // Todo el div del producto abre el modal
 async function createProductCard(prod) {
@@ -391,9 +396,9 @@ function updateQuantity(codigo, delta) {
   animateCart();
 }
 
-async function removeFromCart(codigo) {
+function removeFromCart(codigo) {
   delete cart[codigo];
-  await renderProducts(filteredProducts);
+  updateProductCard(codigo);
   updateCart();
   animateCart();
 }
@@ -447,6 +452,7 @@ async function updateCart() {
   if(document.getElementById('retiro-btn')?.checked) {
     aplicarDescuento();
   }
+  updateMinBar();
 }
 
 const cart2 = document.getElementById('cart');
@@ -494,7 +500,6 @@ function desbloquearBoton(btn) {
 function validarCampos(btn) {
   const nombre = document.getElementById('name')?.value.trim();
   const mail = document.getElementById('email')?.value.trim();
-  // Elimina referencias a telefono y direccion si no existen en el HTML
 
   if (!nombre || !mail) {
     alert('Complete todos los campos.');
@@ -506,6 +511,20 @@ function validarCampos(btn) {
     alert('Agregue productos al carrito.');
     desbloquearBoton(btn);
     return false;
+  }
+
+  const esRetiro = document.getElementById('retiro-btn')?.checked;
+  if (!esRetiro) {
+    let total = 0;
+    for (const codigo in cart) {
+      const prod = products.find(p => p.Codigo === codigo);
+      if (prod) total += prod.Precio * cart[codigo];
+    }
+    if (total < MIN_DELIVERY) {
+      alert(`El pedido con delivery requiere mínimo $${MIN_DELIVERY.toLocaleString('es-AR')}.\nActualmente tenés $${total.toLocaleString('es-AR')}.\n\nSi pasás a buscar el pedido, tildá "Retiro por local" para continuar sin mínimo y con 10% de descuento.`);
+      desbloquearBoton(btn);
+      return false;
+    }
   }
 
   return true;
@@ -710,6 +729,57 @@ function renderControls() {
   }
   document.addEventListener('keydown', escListener);
 }
+function updateMinBar() {
+  const esRetiro = document.getElementById('retiro-btn')?.checked;
+
+  let total = 0;
+  for (const codigo in cart) {
+    const prod = products.find(p => p.Codigo === codigo);
+    if (prod) total += prod.Precio * cart[codigo];
+  }
+
+  const hayProductos = Object.keys(cart).length > 0;
+  const pct = Math.min(100, (total / MIN_DELIVERY) * 100);
+  const falta = Math.max(0, MIN_DELIVERY - total);
+  const alcanzado = total >= MIN_DELIVERY;
+
+  // Barra dentro del carrito
+  const barSection = document.getElementById('min-compra-bar');
+  if (barSection) {
+    if (esRetiro) {
+      barSection.style.display = 'none';
+    } else {
+      barSection.style.display = 'block';
+      const fill = document.getElementById('min-compra-fill');
+      const label = document.getElementById('min-compra-label');
+      const pctEl = document.getElementById('min-compra-pct');
+      const msg = document.getElementById('min-compra-msg');
+
+      if (fill) {
+        fill.style.width = pct + '%';
+        fill.style.backgroundColor = alcanzado ? '#2d5a27' : '#e8a000';
+      }
+      if (label) {
+        label.textContent = alcanzado
+          ? '✓ Mínimo alcanzado para delivery'
+          : `Mínimo para delivery: $${MIN_DELIVERY.toLocaleString('es-AR')}`;
+        label.style.color = alcanzado ? '#2d5a27' : '#333';
+      }
+      if (pctEl) {
+        pctEl.textContent = Math.round(pct) + '%';
+        pctEl.style.color = alcanzado ? '#2d5a27' : '#e8a000';
+      }
+      if (msg) {
+        msg.textContent = alcanzado
+          ? '¡Podés solicitar delivery!'
+          : `Te faltan $${falta.toLocaleString('es-AR')} para el mínimo`;
+        msg.style.color = alcanzado ? '#2d5a27' : '#888';
+      }
+    }
+  }
+
+}
+
 const retiroBtn = document.getElementById('retiro-btn');
 if (retiroBtn) {
   retiroBtn.addEventListener('change', function () {
@@ -718,6 +788,7 @@ if (retiroBtn) {
     } else {
       desactivarDescuento();
     }
+    updateMinBar();
   });
 }
 function desactivarDescuento() {

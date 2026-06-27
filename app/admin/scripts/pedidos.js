@@ -230,6 +230,7 @@ function render() {
       <div style="display:flex;gap:8px;margin-top:8px">
         <button class="btn small" data-id="${o.id}" data-action="edit" id="edit-${o.id}">Ver / Editar</button>
         <button class="btn ghost small" data-id="${o.id}" data-action="print" id="print-${o.id}">Imprimir</button>
+        <button class="btn secondary small" data-id="${o.id}" data-action="feedback" id="feedback-${o.id}">Solicitar Feedback</button>
         <button class="btn danger small" data-id="${o.id}" data-action="delete" id="delete-${o.id}">Eliminar</button>
       </div>
     `;
@@ -238,7 +239,7 @@ function render() {
     const editBtn = card.querySelector('button[id="edit-' + o.id + '"]');
     const deleteBtn = card.querySelector('button[id="delete-' + o.id + '"]');
     const printBtn = card.querySelector('button[id="print-' + o.id + '"]');
-
+    const feedbackBtn = card.querySelector('button[id="feedback-' + o.id + '"]');
     const msgConfirmed = card.querySelector(`#msg-confirmed-${o.id}`);
     const msgDelivered = card.querySelector(`#msg-delivered-${o.id}`);
 
@@ -267,6 +268,22 @@ function render() {
         toggleDelivered(o); };
       msgDelivered.style.cursor = 'pointer';
     }
+    if (feedbackBtn) {
+      if (o.feedback_recibido) {
+        feedbackBtn.textContent = 'Feedback enviado';
+        feedbackBtn.disabled = true;
+      } else {
+        feedbackBtn.onclick = async () => {
+          const ok = await sendFeedbackRequest(o.id);
+
+          if (ok) {
+            feedbackBtn.textContent = 'Feedback enviado';
+            feedbackBtn.disabled = true;
+          }
+        };
+      }
+    }
+
 
     if (editBtn) editBtn.onclick = () => openEdit(o);
     if (printBtn) printBtn.onclick = () => printOrder(o.id);
@@ -274,6 +291,28 @@ function render() {
 
     listEl.appendChild(card);
   }
+}
+async function sendFeedbackRequest(orderId) {
+  if (!orderId) { return; }
+
+  const headers = {};
+  if (token) headers['x-api-key'] = token;
+  try {
+    const res = await fetch(`${API_URL}feedback/request/${orderId}`, {
+      method: 'POST', headers
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      alert('Solicitud de feedback enviada');
+      return true;
+    } else {
+      alert('Error enviando solicitud: ' + (data.error || res.status));
+    }
+  } catch (e) {
+    console.error('Error enviando solicitud de feedback:', e);
+  }
+  return false;
 }
 
 // ===================== ESCAPE HTML =====================

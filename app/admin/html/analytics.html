@@ -195,6 +195,8 @@
       </div>
     </section>
 
+    </section>
+
   </div>
 
 </main>
@@ -396,17 +398,25 @@ function rating(label, val) {
 // ── Feedback list ─────────────────────────────────────────────────────────────
 function renderFeedbackList(list) {
   if (!list.length) {
-    document.getElementById('feedback-list').innerHTML = '<p style="color:var(--muted);font-size:0.85rem;">Sin feedback recibido aún</p>';
+    document.getElementById('feedback-list').innerHTML =
+      '<p style="color:var(--muted);font-size:0.85rem;">Sin feedback recibido aún</p>';
     return;
   }
 
-  const html = list.slice(0, 8).map(fb => `
-    <div class="feedback-item" style="${!fb.leido ? 'border-color:var(--primary);' : ''}">
-      <div class="feedback-meta">
-        ${fb.nombre ? `<strong>${fb.nombre}</strong> · ` : ''}
-        ${fb.order_id ? `Pedido #${fb.order_id} · ` : ''}
-        ${new Date(fb.timestamp).toLocaleDateString('es-AR')}
-        ${!fb.leido ? '🔵' : ''}
+  const html = list.slice(0, 20).map(fb => `
+    <div class="feedback-item" id="fb-${fb.id}"
+         style="${!fb.leido ? 'border-color:var(--primary);' : ''}">
+      <div class="feedback-meta" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>
+          ${fb.order_id ? `Pedido <strong>#${fb.order_id}</strong> · ` : ''}
+          ${new Date(fb.timestamp + 'Z').toLocaleDateString('es-AR')}
+          ${!fb.leido ? '🔵' : ''}
+        </span>
+        <button onclick="deleteFeedback(${fb.id})"
+                style="background:none;border:none;color:var(--danger);cursor:pointer;
+                       font-size:0.8rem;font-weight:700;padding:2px 6px;">
+          🗑 Borrar
+        </button>
       </div>
       <div class="feedback-ratings">
         ${ratingPill('🤝', fb.servicio)}
@@ -414,12 +424,52 @@ function renderFeedbackList(list) {
         ${ratingPill('🚚', fb.entrega)}
         ${ratingPill('🛒', fb.experiencia)}
       </div>
-      ${fb.comentario ? `<div class="feedback-text" style="margin-top:8px;font-style:italic;">"${fb.comentario}"</div>` : ''}
+      ${fb.comentario
+        ? `<div class="feedback-text" style="margin-top:8px;font-style:italic;">"${fb.comentario}"</div>`
+        : ''}
     </div>`).join('');
 
   document.getElementById('feedback-list').innerHTML = html;
 }
 
+async function deleteFeedback(id) {
+  if (!confirm('¿Eliminar esta opinión?')) return;
+  const res = await fetch(`${API}/feedback/${id}`, {
+    method: 'DELETE', headers
+  });
+  if (res.ok) {
+    document.getElementById(`fb-${id}`)?.remove();
+  } else {
+    alert('Error al eliminar');
+  }
+}
+async function sendFeedbackRequest() {
+  const orderId = document.getElementById('fb-order-input').value;
+  const msg     = document.getElementById('fb-send-msg');
+  if (!orderId) { msg.textContent = '⚠️ Ingresá un número de pedido'; return; }
+
+  msg.textContent = 'Enviando...';
+  msg.style.color = 'var(--muted)';
+
+  try {
+    const res = await fetch(`${API}/feedback/request/${orderId}`, {
+      method: 'POST', headers
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      msg.textContent = `✅ Mail enviado a ${data.sent_to}`;
+      msg.style.color = 'var(--success)';
+      document.getElementById('fb-order-input').value = '';
+    } else {
+      msg.textContent = `❌ ${data.detail || 'Error'}`;
+      msg.style.color = 'var(--danger)';
+    }
+  } catch (e) {
+    msg.textContent = '❌ Error de red';
+    msg.style.color = 'var(--danger)';
+  }
+}
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function stars(val) {
   if (!val) return '';

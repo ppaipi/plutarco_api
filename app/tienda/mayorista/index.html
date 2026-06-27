@@ -14,6 +14,44 @@
   <!-- Estilos compartidos con la tienda minorista -->
   <link rel="stylesheet" href="/tienda/static/styles.css?v=2">
   <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Barra de mínimo de compra - panel carrito */
+    .min-compra-section {
+      margin: 12px 0;
+      padding: 12px 14px;
+      background: #f8f5ee;
+      border-radius: 10px;
+      border: 1px solid #e8d5a3;
+    }
+    .min-compra-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 7px;
+      font-size: 0.83rem;
+      font-weight: 600;
+      color: #333;
+    }
+    .min-compra-track {
+      background: #e0d5c0;
+      border-radius: 6px;
+      height: 10px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+    .min-compra-fill {
+      height: 100%;
+      background: #e8a000;
+      border-radius: 6px;
+      transition: width 0.4s ease, background-color 0.3s ease;
+      width: 0%;
+    }
+    .min-compra-msg {
+      font-size: 0.78rem;
+      color: #888;
+      margin: 0;
+    }
+  </style>
 </head>
 
 <body class="mayorista-page">
@@ -44,7 +82,7 @@
 
   <!-- BANNER INFORMATIVO MAYORISTA -->
   <div class="banner-envio" style="background-color: #2d5a27;">
-    <span>🏠 <b>RETIRO LOCAL:</b> 10% OFF</span>
+    <span>🏠 <b>RETIRO LOCAL:</b> 10% OFF | 🚚 <b>ENVÍOS CABA:</b> Lunes mínimo $60.000</span>
   </div>
 
   <main>
@@ -54,7 +92,7 @@
       <div class="hero-content">
         <p class="hero-tag">🍞 Coghlan · del barrio a tu local</p>
         <h2 class="hero-titulo">PLUTARCO PANADERÍA</h2>
-        <p class="hero-sub">Orgánico, integral, vegano y delicioso..</p>                <button class="hero-cta" onclick="document.getElementById('product-list').scrollIntoView({behavior:'smooth'})">
+        <p class="hero-sub">Orgánico, integral, vegano y delicioso!</p><button class="hero-cta" onclick="document.getElementById('product-list').scrollIntoView({behavior:'smooth'})">
           Ver productos ↓
         </button>
 
@@ -75,7 +113,7 @@
       <div class="strip-item">
         <span class="strip-icon">📅</span>
         <div>
-          <strong>Días de Entrega</strong>
+          <strong>Días de Elaboración</strong>
           <span>Lunes y Jueves <br>(consultar por feriados)</span>
         </div>
       </div>
@@ -115,6 +153,18 @@
 
       <div class="cart-body">
         <ul id="cart-items"></ul>
+
+        <!-- Barra mínimo de compra para delivery -->
+        <div id="min-compra-bar" class="min-compra-section" style="display:none;">
+          <div class="min-compra-header">
+            <span id="min-compra-label">Mínimo para delivery: $50.000</span>
+            <span id="min-compra-pct" style="color:#e8a000;">0%</span>
+          </div>
+          <div class="min-compra-track">
+            <div id="min-compra-fill" class="min-compra-fill"></div>
+          </div>
+          <p id="min-compra-msg" class="min-compra-msg">Agregá productos para alcanzar el mínimo</p>
+        </div>
 
         <div class="cart-section-title">Datos del Local</div>
         
@@ -161,7 +211,7 @@
     </section>
 
     <!-- WhatsApp flotante -->
-    <a href="https://wa.me/5491165603579?text=Hola! Consulta Mayorista" 
+    <a href="https://wa.me/5491165603579?text=Hola! Consulta Mayorista"
        class="whatsapp-float" 
        target="_blank">
       <img src="/media_static/whatsapp.png" alt="WhatsApp" class="whatsapp-icon">
